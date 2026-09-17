@@ -1,17 +1,16 @@
 # 콩스튜디오 채용 대시보드
 
-지원자의 이름·공고명·전형 단계만 Google Sheet에서 실시간으로 읽고, 공고별 TO와 채용 배경을 관리하는 내부용 대시보드입니다.
+지원자의 이름·공고명·전형 단계만 Google Sheet에서 실시간으로 읽고, 공고별 TO와 채용 배경을 관리하는 별도 채용 대시보드입니다.
 
-## 보안 구조
+## 데이터 연결 구조
 
 - GitHub 저장소와 배포 파일에는 지원자 이름을 저장하지 않습니다.
-- 공용 비밀번호는 Cloudflare 환경변수에만 저장합니다.
-- 로그인 세션은 `HttpOnly`, `Secure`, `SameSite=Strict` 쿠키를 사용하며 8시간 뒤 만료됩니다.
 - 브라우저는 Google Sheet에 직접 접근하지 않고 Cloudflare Function을 거칩니다.
 - 시트 연동 토큰도 브라우저 코드에 포함되지 않습니다.
 - 공개 게임잡 채용 데이터 사이트와 저장소를 완전히 분리합니다.
+- 별도의 로그인·비밀번호 화면 없이 대시보드 주소로 바로 접속합니다.
 
-> 공용 비밀번호 방식은 계정별 권한 관리가 되지 않습니다. 비밀번호를 정기적으로 바꾸고, 외부 공유가 의심되면 즉시 교체하세요.
+> 현재 버전은 접속 제한이 없습니다. 실제 지원자 이름을 연결하면 URL을 아는 사람이 볼 수 있으므로, 시험 운영 후 필요할 때 접근 제한을 추가하세요.
 
 ## 표시되는 전형 단계
 
@@ -56,9 +55,7 @@ Apps Script는 다음 탭을 자동으로 찾습니다.
    - Framework preset: `Vite`
    - Build command: `npm run build`
    - Build output directory: `dist`
-4. `Settings → Variables and Secrets`에 다음 네 값을 `Secret`으로 등록합니다.
-   - `DASHBOARD_PASSWORD`: 대시보드 접속 비밀번호
-   - `DASHBOARD_SESSION_SECRET`: 40자 이상의 별도 임의 문자열
+4. `Settings → Variables and Secrets`에 다음 두 값을 `Secret`으로 등록합니다.
    - `SHEET_API_URL`: Apps Script의 `/exec` URL
    - `SHEET_API_TOKEN`: Apps Script의 `API_TOKEN`과 같은 값
 5. 다시 배포합니다.

@@ -1,36 +1,22 @@
-import { FormEvent, useEffect, useMemo, useState } from 'react'
-import { ArrowLeft, BriefcaseBusiness, Check, ChevronRight, Clock3, ExternalLink, LockKeyhole, LogOut, RefreshCw, Search, Settings2, Target, UsersRound, X } from 'lucide-react'
+import { useEffect, useMemo, useState } from 'react'
+import { BriefcaseBusiness, Check, ChevronRight, Clock3, ExternalLink, RefreshCw, Search, Settings2, Target, UsersRound, X } from 'lucide-react'
 import { api } from './api'
 import { PIPELINE_STAGES, type Candidate, type DashboardData, type Opening, type PipelineStage } from './types'
 
 export default function App() {
-  const [authenticated, setAuthenticated] = useState<boolean | null>(null)
-  useEffect(() => { api.session().then(x => setAuthenticated(x.authenticated)).catch(() => setAuthenticated(false)) }, [])
-  if (authenticated == null) return <Loading label="접속 권한을 확인하고 있어요" />
-  if (!authenticated) return <Login onSuccess={() => setAuthenticated(true)} />
-  return <Dashboard onLogout={() => setAuthenticated(false)} />
+  return <Dashboard />
 }
 
-function Login({ onSuccess }: { onSuccess: () => void }) {
-  const [password, setPassword] = useState(''), [error, setError] = useState(''), [busy, setBusy] = useState(false)
-  const submit = async (event: FormEvent) => {
-    event.preventDefault(); setError(''); setBusy(true)
-    try { await api.login(password); onSuccess() } catch (e) { setError(e instanceof Error ? e.message : '로그인하지 못했습니다.') } finally { setBusy(false) }
-  }
-  return <main className="login-page"><section className="login-card"><div className="login-symbol"><LockKeyhole /></div><span>KONG STUDIOS · PEOPLE</span><h1>채용 대시보드</h1><p>공고별 TO와 지원자의 전형 진행 상황을 확인하세요.</p><form onSubmit={submit}><label>접속 비밀번호<input autoFocus type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="비밀번호 입력" autoComplete="current-password" /></label>{error && <div className="form-error">{error}</div>}<button disabled={busy || !password}>{busy ? '확인 중…' : '대시보드 열기'} <ChevronRight size={18} /></button></form><small>지원자 정보는 로그인 후 Google Sheet에서 실시간으로 불러옵니다.</small></section></main>
-}
-
-function Dashboard({ onLogout }: { onLogout: () => void }) {
+function Dashboard() {
   const [data, setData] = useState<DashboardData | null>(null), [error, setError] = useState(''), [loading, setLoading] = useState(true)
   const [selectedId, setSelectedId] = useState(''), [query, setQuery] = useState(''), [includeClosed, setIncludeClosed] = useState(false)
   const load = async () => { setLoading(true); setError(''); try { const next = await api.dashboard(); setData(next); setSelectedId(id => id || next.openings.find(x => x.status === '진행중')?.id || next.openings[0]?.id || '') } catch (e) { setError(e instanceof Error ? e.message : '데이터를 불러오지 못했습니다.') } finally { setLoading(false) } }
   useEffect(() => { void load() }, [])
   const openings = useMemo(() => (data?.openings || []).filter(x => (includeClosed || x.status === '진행중') && `${x.title} ${x.project}`.toLowerCase().includes(query.toLowerCase())), [data, query, includeClosed])
   const selected = data?.openings.find(x => x.id === selectedId) || null
-  const logout = async () => { await api.logout().catch(() => undefined); onLogout() }
   const replaceOpening = (opening: Opening) => setData(current => current ? { ...current, openings: current.openings.map(x => x.id === opening.id ? opening : x) } : current)
 
-  return <div className="shell"><header className="topbar"><div><div className="brand-mark">KS</div><span><b>채용 대시보드</b><small>콩스튜디오코리아</small></span></div><nav><button onClick={load} disabled={loading}><RefreshCw size={16} className={loading ? 'spin' : ''} /> 새로고침</button><button onClick={logout}><LogOut size={16} /> 로그아웃</button></nav></header>
+  return <div className="shell"><header className="topbar"><div><div className="brand-mark">KS</div><span><b>채용 대시보드</b><small>콩스튜디오코리아</small></span></div><nav><button onClick={load} disabled={loading}><RefreshCw size={16} className={loading ? 'spin' : ''} /> 새로고침</button></nav></header>
     <div className="workspace"><aside className="opening-sidebar"><div className="sidebar-title"><span>OPEN POSITIONS</span><h2>채용 공고</h2></div><label className="search"><Search size={16} /><input value={query} onChange={e => setQuery(e.target.value)} placeholder="공고·프로젝트 검색" />{query && <button onClick={() => setQuery('')}><X size={14} /></button>}</label><label className="closed-toggle"><input type="checkbox" checked={includeClosed} onChange={e => setIncludeClosed(e.target.checked)} /> 마감 공고 포함</label><div className="opening-list">{openings.map(opening => <button key={opening.id} className={selectedId === opening.id ? 'active' : ''} onClick={() => setSelectedId(opening.id)}><span className={`status-dot ${opening.status === '마감' ? 'closed' : ''}`} /><div><b>{opening.title}</b><small>{opening.project || '프로젝트 미지정'} · 진행 {opening.candidates.length}명</small></div><ChevronRight size={15} /></button>)}</div></aside>
       <main className="content">{error ? <ErrorState message={error} retry={load} /> : loading && !data ? <Loading label="채용 현황을 불러오는 중이에요" /> : selected ? <OpeningBoard opening={selected} onChange={replaceOpening} /> : <EmptyState />}</main></div>
     <footer><span>마지막 동기화 {data?.syncedAt ? new Date(data.syncedAt).toLocaleString('ko-KR') : '-'}</span><span>진행 지원자 {data?.candidateCount || 0}명</span></footer>

@@ -12,9 +12,6 @@ async function request<T>(url: string, init?: RequestInit): Promise<T> {
 }
 
 export const api = {
-  login: (password: string) => request<{ ok: true }>('/api/login', { method: 'POST', body: JSON.stringify({ password }) }),
-  logout: () => request<{ ok: true }>('/api/logout', { method: 'POST' }),
-  session: () => request<{ authenticated: boolean }>('/api/session'),
   dashboard: () => request<DashboardData>('/api/dashboard'),
   moveCandidate: (row: number, stage: PipelineStage) => request<{ ok: true }>('/api/stage', { method: 'POST', body: JSON.stringify({ row, stage }) }),
   updateOpening: (title: string, targetTo: number, reason: string, project: string) => request<{ ok: true }>('/api/opening', { method: 'POST', body: JSON.stringify({ title, targetTo, reason, project }) }),
