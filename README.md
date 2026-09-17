@@ -1,94 +1,105 @@
 # 콩스튜디오 채용 대시보드
 
-지원자의 이름·공고명·전형 단계만 Google Sheet에서 실시간으로 읽고, 공고별 TO와 채용 배경을 관리하는 별도 채용 대시보드입니다.
+게임잡 공고와 Google Sheet의 지원자 진행 단계를 GitHub Pages에서 조회하는 읽기 전용 대시보드입니다.
 
-## 데이터 연결 구조
+## 주요 기능
 
-- GitHub 저장소와 배포 파일에는 지원자 이름을 저장하지 않습니다.
-- 브라우저는 Google Sheet에 직접 접근하지 않고 Cloudflare Function을 거칩니다.
-- 시트 연동 토큰도 브라우저 코드에 포함되지 않습니다.
-- 공개 게임잡 채용 데이터 사이트와 저장소를 완전히 분리합니다.
-- 별도의 로그인·비밀번호 화면 없이 대시보드 주소로 바로 접속합니다.
+- 게임잡에 등록된 콩스튜디오코리아 공고를 매시간 자동 확인
+- 등록일부터 7일 동안 공고 옆에 `NEW` 표시
+- 메인 상단에는 오픈 공고, 목표 TO, 진행 지원자 3개 핵심 지표만 표시
+- `확인 필요`에서 진행 지원자가 없거나 TO·프로젝트가 미입력된 공고를 우선 표시
+- 프로젝트별 오픈 공고 수, 목표 TO, 진행 지원자와 핵심 상황을 한 줄로 요약
+- 공고별 전체 상세 표는 필요할 때만 펼쳐서 확인
+- `리포트 생성하기`에서 현재 현황과 브라우저 메모를 슬랙용 문구로 만들고 바로 복사
+- 공고별 목표 TO, 채용 배경, 자유 메모를 현재 브라우저에 저장
+- 아트·개발 직무에 맞는 전형 단계를 자동 추천하고 공고별로 사용 단계를 선택
+- 공고별로 9개 진행 단계의 지원자 확인
+- 대시보드에서는 Google Sheet를 수정하지 않음
 
-> 현재 버전은 접속 제한이 없습니다. 실제 지원자 이름을 연결하면 URL을 아는 사람이 볼 수 있으므로, 시험 운영 후 필요할 때 접근 제한을 추가하세요.
+표시 단계: `온라인 과제`, `코딩테스트`, `역량검사`, `면접`, `1차 면접`, `2차 면접`, `면접합격`, `처우단계`, `Offer`
 
-## 표시되는 전형 단계
+`Hired`, 불합격, 포기, 취소 등은 카드에서 제외합니다. `Hired`는 충원 완료 인원 계산에만 사용합니다.
 
-`온라인 과제`, `코딩테스트`, `역량검사`, `면접`, `1차 면접`, `2차 면접`, `면접합격`, `처우단계`, `Offer`
+## 데이터 흐름
 
-`Hired`, 불합격, 포기, 취소 등은 카드로 표시하지 않습니다. `Hired`는 공고별 충원 완료 인원 계산에만 사용합니다.
+1. GitHub Actions가 매시간 게임잡의 콩스튜디오코리아 공고를 확인합니다.
+2. Apps Script가 기존 지원자 시트에서 필요한 열과 진행 단계만 읽어 반환합니다.
+3. GitHub Actions 안에서 현재 게임잡 공고와 지원자 데이터를 공고명으로 결합합니다.
+4. 결합 결과를 `dashboard.json`으로 만든 후 GitHub Pages에 배포합니다.
+5. 대시보드는 배포된 JSON을 읽기만 하며 Google Sheet에는 아무것도 쓰지 않습니다.
+
+지원자 이름과 진행 단계는 배포 결과의 JSON에 포함됩니다. 로그인 없는 GitHub Pages를 사용하므로 사이트 주소를 아는 사람은 이 데이터를 볼 수 있습니다.
 
 ## 1. 별도 GitHub 저장소 만들기
 
-1. GitHub에서 `New repository`를 누릅니다.
+1. GitHub에서 새 저장소를 만듭니다.
 2. 저장소 이름을 `kong-recruiting-dashboard`로 입력합니다.
-3. 반드시 `Private`를 선택합니다.
-4. 이 프로젝트의 모든 파일을 저장소에 업로드합니다.
+3. ZIP 내부의 모든 파일과 폴더를 저장소 최상단에 업로드합니다.
+4. 저장소 `Settings → Pages → Build and deployment`에서 Source를 `GitHub Actions`로 선택합니다.
 
-## 2. Google Sheet API 설치
+저장소를 Private으로 설정해도 배포된 GitHub Pages 사이트의 공개 여부와는 별개입니다.
+
+## 2. Google Apps Script 설치
 
 1. 지원자 관리 Google Sheet를 엽니다.
 2. `확장 프로그램 → Apps Script`를 선택합니다.
 3. 기본 코드를 지우고 `google-apps-script/Code.gs` 전체를 붙여넣습니다.
-4. Apps Script의 `프로젝트 설정 → 스크립트 속성`에 다음 값을 추가합니다.
+4. `프로젝트 설정 → 스크립트 속성`에 아래 값을 등록합니다.
    - 속성: `API_TOKEN`
    - 값: 직접 만든 40자 이상의 임의 문자열
 5. `배포 → 새 배포 → 웹 앱`을 선택합니다.
 6. 실행 사용자는 `나`, 액세스 사용자는 `모든 사용자`로 설정합니다.
 7. 배포 후 `/exec`로 끝나는 웹 앱 URL을 복사합니다.
 
-웹 앱 자체는 공개 주소지만 `API_TOKEN`이 없는 요청은 데이터를 반환하지 않습니다. 토큰은 Cloudflare와 GitHub Secret에만 저장합니다.
-
-Apps Script는 다음 탭을 자동으로 찾습니다.
+Apps Script는 다음 기존 탭만 읽습니다.
 
 - 지원자: `1. 2026 Interviewee`
-- TO·채용 배경: `TO정리`
-- 게임잡 동기화 결과: `채용대시보드_공고` 자동 생성
 
-지원자 시트의 헤더 위치는 자동 탐색하므로 13행에 고정할 필요가 없습니다. 필수 헤더는 `진행단계`, `이름`, `직무(공고명)`이며, `PJ`가 있으면 프로젝트명으로 사용합니다.
+지원자 시트에서 필요한 헤더는 `진행단계`, `이름`, `직무(공고명)`입니다. `PJ` 열이 있으면 프로젝트명으로 사용합니다.
 
-## 3. Cloudflare Pages 배포
+Apps Script에는 `insertSheet`, `setValue`, `appendRow` 같은 쓰기 코드가 없습니다. 새로운 탭이나 열을 생성하지 않으며 기존 셀도 수정하지 않습니다. 이전 버전이 만든 `채용대시보드_공고` 탭은 새 코드를 배포한 후 삭제할 수 있습니다.
 
-1. Cloudflare에서 `Workers & Pages → Create → Pages → Connect to Git`으로 이동합니다.
-2. 위에서 만든 비공개 GitHub 저장소를 연결합니다.
-3. 빌드 설정을 입력합니다.
-   - Framework preset: `Vite`
-   - Build command: `npm run build`
-   - Build output directory: `dist`
-4. `Settings → Variables and Secrets`에 다음 두 값을 `Secret`으로 등록합니다.
-   - `SHEET_API_URL`: Apps Script의 `/exec` URL
-   - `SHEET_API_TOKEN`: Apps Script의 `API_TOKEN`과 같은 값
-5. 다시 배포합니다.
+## 3. GitHub Secret 등록
 
-## 4. 게임잡 신규 공고 자동 등록
+저장소의 `Settings → Secrets and variables → Actions`에서 다음 Repository Secret 두 개를 등록합니다.
 
-별도 GitHub 저장소의 `Settings → Secrets and variables → Actions`에 다음 Repository Secret을 등록합니다.
+- `SHEET_API_URL`: Apps Script의 `/exec` URL
+- `SHEET_API_TOKEN`: Apps Script에 등록한 `API_TOKEN` 값
 
-- `SHEET_API_URL`: Apps Script `/exec` URL
-- `SHEET_API_TOKEN`: Apps Script `API_TOKEN`
+## 4. 최초 실행
 
-그다음 `Actions → Sync KONG GameJob Openings → Run workflow`를 한 번 실행합니다. 이후 매시간 7분에 콩스튜디오코리아 공고를 확인합니다.
+1. 저장소의 `Actions` 탭을 엽니다.
+2. `Sync recruiting data and deploy Pages`를 선택합니다.
+3. `Run workflow`를 실행합니다.
+4. 작업이 완료되면 `Settings → Pages`에 대시보드 주소가 표시됩니다.
 
-- 신규 `GI_No`: 대시보드 공고 자동 생성
-- 유지 `GI_No`: 공고 정보 갱신
-- 사라진 `GI_No`: 삭제하지 않고 `마감` 처리
-- 수집 결과가 0건인 경우: 기존 공고를 변경하지 않고 작업 실패 처리
+이후 매시간 7분에 자동으로 공고와 지원자 현황을 갱신합니다. 시트를 수정한 직후 바로 반영하려면 같은 workflow를 수동 실행합니다.
 
-## 5. 공개 사이트에 링크 연결
+## 브라우저 메모
 
-기존 `gpt-final` 저장소에서 `Settings → Secrets and variables → Actions → Variables`로 이동해 다음 변수를 등록합니다.
+- `TO·전형·메모 편집`에서 프로젝트, 목표 TO, 채용 배경, 메모와 해당 공고가 사용하는 전형 단계를 설정합니다.
+- 아트 계열은 `온라인 과제`, 개발 계열은 `코딩테스트`를 기본 추천합니다.
+- 현재 지원자가 있는 단계는 설정에서 해제해도 누락 방지를 위해 계속 표시됩니다.
+- 내용은 브라우저의 로컬 저장소에만 저장됩니다.
+- Google Sheet나 GitHub에는 기록되지 않습니다.
+- 다른 PC·브라우저와 공유되지 않으며 브라우저 데이터를 지우면 삭제됩니다.
 
-- 이름: `RECRUITING_DASHBOARD_URL`
-- 값: Cloudflare Pages에서 발급된 대시보드 주소
+## 슬랙 리포트
 
-그다음 `Deploy GitHub Pages`를 실행하면 `데이터 진단` 옆의 `채용 대시보드` 링크가 활성화됩니다.
+- 메인 화면의 `리포트 생성하기`를 누르면 프로젝트 → 직무 → 현재 진행 상황 순서로 보고 문구를 만듭니다.
+- 진행 지원자가 없는 공고는 `이력서 검토 중`으로만 표시합니다.
+- 진행 지원자가 있는 공고에는 단계별 현재 인원과 브라우저에 저장한 채용 배경·메모가 반영됩니다.
+- 생성된 문구는 팝업에서 수정한 뒤 `Slack 문구 복사`로 복사할 수 있습니다.
+
+## 기존 공개 사이트에 연결
+
+기존 `gpt-final` 저장소의 Actions 변수 `RECRUITING_DASHBOARD_URL`에 새 GitHub Pages 주소를 입력한 후 기존 사이트를 다시 배포합니다.
 
 ## 로컬 확인
 
 ```bash
 npm install
-cp .dev.vars.example .dev.vars
 npm run dev
 ```
 
-Cloudflare Functions까지 로컬에서 확인하려면 Wrangler를 사용해 `npx wrangler pages dev dist`로 실행합니다.
+로컬에서는 `public/data/dashboard.json`의 기본 빈 데이터를 표시합니다. 실제 데이터는 GitHub Actions 실행 과정에서 생성됩니다.
