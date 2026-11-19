@@ -1,37 +1,66 @@
 const RECRUITING_BOOK_ID = '1c0x-dBPGGjDTPAXiO84-H-iwytpwy3WOAG05ogsXBuk';
 
-// 한 번 실행: 신청서 편집 및 5분 주기 동기화 설치.
+// 최초 한 번 실행: 이전 트리거를 정리하고 수정 즉시 실행하는 트리거만 설치합니다.
 function setupRosterSync() {
   syncRecruitingRoster();
-  const triggers=ScriptApp.getProjectTriggers();
-  if (!triggers.some(t=>t.getHandlerFunction()==='onRecruitingRosterEdit'))
-    ScriptApp.newTrigger('onRecruitingRosterEdit').forSpreadsheet(RECRUITING_BOOK_ID).onEdit().create();
-  if (!triggers.some(t=>t.getHandlerFunction()==='syncRecruitingRoster'))
-    ScriptApp.newTrigger('syncRecruitingRoster').timeBased().everyMinutes(5).create();
+  for (const trigger of ScriptApp.getProjectTriggers()) {
+    if (['onRecruitingRosterEdit','syncRecruitingRoster'].includes(trigger.getHandlerFunction())) {
+      ScriptApp.deleteTrigger(trigger);
+    }
+  }
+  ScriptApp.newTrigger('onRecruitingRosterEdit')
+    .forSpreadsheet(RECRUITING_BOOK_ID).onEdit().create();
 }
 function onRecruitingRosterEdit(e) {
-  if(e && e.range && e.range.getSheet().getName()==='채용승인신청서') syncRecruitingRoster();
+  if (!e || !e.range) return;
+  const range=e.range, sheet=range.getSheet();
+  if (sheet.getName()==='채용승인신청서') {
+    syncRecruitingRoster();
+    return;
+  }
+  // TO 표 또는 명단의 직접 입력 칸을 수정/붙여넣기/삭제했을 때만 실행.
+  const inputColumns=range.getColumn()<=2;
+  const touchesTO=range.getRow()<=33 && range.getLastRow()>=4;
+  const touchesRoster=range.getRow()<=337 && range.getLastRow()>=38;
+  if (inputColumns && (touchesTO || touchesRoster) &&
+      sheet.getRange('A3').getValue()==='파트' &&
+      sheet.getRange('B3').getValue()==='전체 TO') {
+    syncRecruitingRoster(sheet.getSheetId());
+  }
 }
-function planRosterSync(existing, markers, incoming) {
-  const rows=existing.map(r=>r.slice(0,2)), keys=markers.map(r=>r[0]||'');
+function planRosterSync(existing, markers, incoming, targets) {
+  const capacity=existing.length;
   const desired=new Map(incoming.map(r=>[JSON.stringify([r[0],r[1]]),[r[4],r[1]]]));
-  // Only rows created by this synchronizer may be changed or removed.
-  for(let i=0;i<rows.length;i++) if(keys[i]) {
-    const item=desired.get(keys[i]);
-    if(item) { rows[i]=item; desired.delete(keys[i]); }
-    else {rows[i]=['',''];keys[i]='';}
+  const people=[];
+  for(let i=0;i<capacity;i++) {
+    const key=markers[i][0]||'', row=existing[i];
+    if(key) {
+      if(desired.has(key)){people.push({values:desired.get(key),key});desired.delete(key);}
+    } else if(row[1])people.push({values:row.slice(0,2),key:''});
   }
-  for(const [key,item] of desired) {
-    if(rows.some(r=>r[0]===item[0] && r[1]===item[1]))continue;
-    const i=rows.findIndex(r=>!r[0]&&!r[1]);
-    if(i<0)throw Error('재직자 명단 300행이 가득 찼습니다. 입력 범위 확장이 필요합니다.');
-    rows[i]=item;keys[i]=key;
+  for(const [key,values] of desired) {
+    if(!people.some(p=>p.values[0]===values[0]&&p.values[1]===values[1]))people.push({values,key});
   }
-  return rows.flatMap((r,i)=>JSON.stringify(r)!==JSON.stringify(existing[i])||keys[i]!==markers[i][0] ? [{row:38+i,values:r,key:keys[i]}]:[]);
+  const teams=new Map();
+  for(const [team,to] of targets)if(team){
+    const count=to===''?0:to;
+    if(!Number.isSafeInteger(count)||count<0)throw Error(team+' TO는 0 이상의 정수로 입력하세요.');
+    teams.set(team,(teams.get(team)||0)+count);
+  }
+  for(const p of people)if(!teams.has(p.values[0]))teams.set(p.values[0],0);
+  const output=[];
+  for(const [team,to] of teams){
+    const members=people.filter(p=>p.values[0]===team);
+    output.push(...members);
+    for(let i=members.length;i<to;i++)output.push({values:[team,''],key:''});
+  }
+  if(output.length>capacity)throw Error('필요한 명단이 '+output.length+'행입니다. 현재 입력 범위 '+capacity+'행을 확장해야 합니다. 기존 명단은 유지됩니다.');
+  while(output.length<capacity)output.push({values:['',''],key:''});
+  return output.flatMap((p,i)=>JSON.stringify(p.values)!==JSON.stringify(existing[i])||p.key!==(markers[i][0]||'') ? [{row:38+i,values:p.values,key:p.key}]:[]);
 }
-function syncRecruitingRoster() {
+function syncRecruitingRoster(targetSheetId) {
   const lock=LockService.getScriptLock();
-  if(!lock.tryLock(30000))return;
+  lock.waitLock(30000);
   try {
     const book=SpreadsheetApp.openById(RECRUITING_BOOK_ID);
     SpreadsheetApp.flush();
@@ -39,15 +68,29 @@ function syncRecruitingRoster() {
     const n=reg.getLastRow()-3;
     const people=n>0?reg.getRange(4,14,n,6).getValues().filter(r=>r[0]&&r[1]&&r[3]&&r[4]&&['입사예정','채용완료'].includes(r[5])):[];
     const plans=[];
-    for(const sheet of book.getSheets()) {
+    const sheets=typeof targetSheetId==='number'?[book.getSheetById(targetSheetId)]:book.getSheets();
+    for(const sheet of sheets) {
+      if(!sheet)continue;
       if(sheet.getRange('A3').getValue()!=='파트'||sheet.getRange('B3').getValue()!=='전체 TO')continue;
       const existing=sheet.getRange('A38:B337').getValues(),markers=sheet.getRange('L38:L337').getValues();
-      const updates=planRosterSync(existing,markers,people.filter(r=>r[3]===sheet.getName()));
+      const updates=planRosterSync(existing,markers,people.filter(r=>r[3]===sheet.getName()),sheet.getRange('A4:B33').getValues());
       plans.push({sheet,updates});
     }
-    for(const {sheet,updates} of plans)for(const item of updates){
-      sheet.getRange(item.row,1,1,2).setValues([item.values]);
-      sheet.getRange(item.row,12).setValue(item.key);
+    // 연속된 변경 행은 묶어서 기록해 실행 시간을 줄입니다. C:D 수식은 유지합니다.
+    for(const {sheet,updates} of plans) {
+      let block=[];
+      function writeBlock(){
+        if(!block.length)return;
+        sheet.getRange(block[0].row,1,block.length,2).setValues(block.map(u=>u.values));
+        sheet.getRange(block[0].row,12,block.length,1).setValues(block.map(u=>[u.key]));
+        block=[];
+      }
+      for(const update of updates){
+        if(block.length && update.row!==block[block.length-1].row+1)writeBlock();
+        block.push(update);
+      }
+      writeBlock();
     }
+    SpreadsheetApp.flush();
   }finally{lock.releaseLock();}
 }
