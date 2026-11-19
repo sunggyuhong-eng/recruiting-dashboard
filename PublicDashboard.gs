@@ -12,13 +12,15 @@ function doGet() {
       if (typeof value !== 'number' || !Number.isSafeInteger(value) || value < 0) throw Error('숫자 확인');
       return value;
     }
-    for (const sheet of book.getSheets()) {
-      if (sheet.isSheetHidden() || sheet.getRange('A3').getValue() !== '파트' || sheet.getRange('B3').getValue() !== '전체 TO') continue;
-      for (const [team,to,hc] of sheet.getRange('A4:C33').getValues()) {
-        if (!team) continue;
-        const g = group(sheet.getName(), String(team));
-        g.to += number(to);
-        g.hc += number(hc);
+    const roster = book.getSheetByName('파트별 인원 보드');
+    if (roster.getLastRow() >= 4) {
+      const range = roster.getRange(4,1,roster.getLastRow()-3,8);
+      for (const row of range.getValues()) {
+        if (!row[0] || !row[1]) continue;
+        const item = group(String(row[0]),String(row[1]));
+        item.to=number(row[2]); item.hc=number(row[3]);
+        item.staff=String(row[5]||''); item.arrivals=String(row[6]||'');
+        item.parent=String(row[7]||'');
       }
     }
     const reg = book.getSheetByName('채용승인신청서');
@@ -29,14 +31,6 @@ function doGet() {
       g.open += number(row[6]);
       g.planned += number(row[9]);
     }
-    const roster = book.getSheetByName('파트별 인원 보드');
-    if (roster.getLastRow() >= 4) {
-      for (const row of roster.getRange(4,1,roster.getLastRow()-3,8).getDisplayValues()) {
-        if (!row[0] || !row[1]) continue;
-        const item = groups.get(JSON.stringify([row[0], row[1]]));
-        if (item) [item.staff, item.arrivals, item.passed] = row.slice(5,8);
-      }
-    }
     const history = book.getSheetByName('채용 히스토리');
     const daily = new Map();
     if (history.getLastRow()>3) for (const [date,project] of history.getRange(4,1,history.getLastRow()-3,2).getValues()) {
@@ -46,7 +40,7 @@ function doGet() {
       if (!daily.has(key)) daily.set(key,{day,project,count:0});
       daily.get(key).count++;
     }
-    return dashboardJson({rosterVersion:1,parts:Array.from(groups.values()),daily:Array.from(daily.values())});
+    return dashboardJson({rosterVersion:2,parts:Array.from(groups.values()),daily:Array.from(daily.values())});
   } catch (err) {
     console.error(err);
     return dashboardJson({error:true});

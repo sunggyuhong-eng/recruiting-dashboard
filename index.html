@@ -1,16 +1,42 @@
 <!doctype html><html lang="ko"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>채용 대시보드</title>
 <style>
 *{box-sizing:border-box}body{margin:0;background:#f5f7f7;color:#173536;font:16px/1.5 "Malgun Gothic",sans-serif}main{max-width:1080px;margin:auto;padding:44px 20px}header,.actions,.dates{display:flex;align-items:center;gap:10px;flex-wrap:wrap}header{justify-content:space-between}h1{letter-spacing:-2px;font-size:36px;margin:0}h2{font-size:21px;margin:30px 0 12px}button,select,input{font:inherit;padding:7px 10px;border:1px solid #c9d5d3;border-radius:7px;background:white}button{cursor:pointer}.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}.card,.panel{background:white;border:1px solid #d8e2e0;border-radius:12px}.card{padding:17px;color:#456460}.card b{display:block;color:#174c44;font-size:31px}.panel{overflow:auto}table{width:100%;border-collapse:collapse;text-align:center;white-space:nowrap}td,th{padding:10px;border-bottom:1px solid #e9eeee}th{background:#e8f1ee}#status{font-size:14px;color:#536562}.dates{margin-bottom:10px}@media(max-width:690px){.cards{grid-template-columns:1fr 1fr}main{padding:24px 12px}}
-.sectionhead{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:12px}.roster{color:#15594f;font-weight:bold}.projectboard{margin:12px 0 22px}.projectboard h3{margin:0;padding:14px 18px;background:#173e3c;color:white;font-size:18px}.projectboard h3 small{font-size:14px;font-weight:normal;margin-left:16px}.projectboard td:nth-child(n+3){white-space:pre-line;min-width:120px;text-align:left}main{max-width:1440px}.projectboard td{vertical-align:top}.projectboard td:nth-child(n+3){line-height:1.8}.projectboard th:nth-child(n+3){text-align:left}</style><main><header><h1>채용 대시보드</h1><div class="actions"><select id="project" aria-label="프로젝트"><option value="">전체 프로젝트</option></select><button id="reload">새로고침</button></div></header><p id="status" role="status"></p><section class="cards" id="cards"></section><div class="sectionhead"><h2>프로젝트별 인원 보드</h2><a class="roster" href="https://docs.google.com/spreadsheets/d/1c0x-dBPGGjDTPAXiO84-H-iwytpwy3WOAG05ogsXBuk/edit#gid=823401" target="_blank" rel="noopener">시트에서 명단 보기 ↗</a></div><div id="parts"></div><h2>기간별 채용완료</h2><div class="dates"><button id="week">이번 주</button><button id="prev">지난주</button><label>시작일 <input id="from" type="date"></label><label>종료일 <input id="until" type="date"></label></div><div class="panel" id="report"></div></main><script src="config.js"></script><script>
+.sectionhead{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:12px}.roster{color:#15594f;font-weight:bold}.projectboard{margin:12px 0 22px}.projectboard h3{margin:0;padding:14px 18px;background:#173e3c;color:white;font-size:18px}.projectboard h3 small{font-size:14px;font-weight:normal;margin-left:16px}main{max-width:1600px}.projectboard{border-radius:8px}.projectboard table{font-size:14px}.projectboard td,.projectboard th{border:1px solid #cbd7d4;padding:12px 14px;vertical-align:middle;text-align:center}.projectboard tbody th{background:#f6f9f8;text-align:left;min-width:190px;font-weight:500}.projectboard .person{min-width:98px;white-space:nowrap}.projectboard .tbh{color:#a96810;background:#fffaf0;font-weight:600}.projectboard .arrival{min-width:220px;white-space:pre-line;color:#236c91;font-size:13px}.projectboard .parent th,.projectboard .parent td{background:#e4efeb;font-weight:700;border-top:2px solid #a9beb7}.projectboard .parent td:last-child{text-align:left;color:#56736b;font-size:12px;font-weight:400}.projectboard thead th{background:#edf3f1;font-weight:700}.projectboard td:nth-child(2){min-width:130px}.projectboard .planned{background:#edf6fc;color:#246785}.projectboard .planned small{display:block;font-size:11px;white-space:nowrap;margin-top:3px}.projectboard .person{min-width:105px}</style><main><header><h1>채용 대시보드</h1><div class="actions"><select id="project" aria-label="프로젝트"><option value="">전체 프로젝트</option></select><button id="reload">새로고침</button></div></header><p id="status" role="status"></p><section class="cards" id="cards"></section><div class="sectionhead"><h2>프로젝트별 인원 보드</h2><a class="roster" href="https://docs.google.com/spreadsheets/d/1c0x-dBPGGjDTPAXiO84-H-iwytpwy3WOAG05ogsXBuk/edit#gid=823401" target="_blank" rel="noopener">시트에서 명단 보기 ↗</a></div><div id="parts"></div><h2>기간별 채용완료</h2><div class="dates"><button id="week">이번 주</button><button id="prev">지난주</button><label>시작일 <input id="from" type="date"></label><label>종료일 <input id="until" type="date"></label></div><div class="panel" id="report"></div></main><script src="config.js"></script><script>
 const el=id=>document.getElementById(id);
 let data;
 function node(tag,value){const n=document.createElement(tag);n.textContent=value;return n;}
 function table(id,headers,rows){const t=document.createElement('table'),h=t.createTHead().insertRow(),b=t.createTBody();headers.forEach(v=>h.append(node('th',v)));for(const row of rows){const r=b.insertRow();row.forEach(v=>r.append(node('td',v)));}if(!rows.length){const c=b.insertRow().insertCell();c.colSpan=headers.length;c.textContent='해당 기록이 없습니다.';}(typeof id==="string"?el(id):id).replaceChildren(t);}
 function setWeek(offset){const date=new Date(new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Seoul'}).format(new Date())+'T00:00:00Z');date.setUTCDate(date.getUTCDate()-(date.getUTCDay()+6)%7+offset);el('from').value=date.toISOString().slice(0,10);date.setUTCDate(date.getUTCDate()+6);el('until').value=date.toISOString().slice(0,10);if(data)render();}
-function rosterRow(part) {
-  const people = (part.staff || '').split(/\s*·\s*|\r?\n/).map(name => name.trim()).filter(Boolean);
-  for (let slot = 0; slot < part.open; slot++) people.push('TBH');
-  return [part.team, part.to + ' (' + part.hc + ')', people.join('\n'), part.arrivals || ''];
+function people(part){return (part.staff||'').split(/\s*·\s*|\r?\n/).map(s=>s.trim()).filter(Boolean);}
+function memberCells(part){
+ const staff=people(part).map(name=>({name,kind:'staff'}));
+ const arrivals=(part.arrivals||'').split(/\r?\n/).map(s=>s.trim()).filter(Boolean).map(s=>{
+  const match=s.match(/^(.*) \((\d{4}-\d{2}-\d{2})\)$/);
+  return {name:match?match[1]:s,date:match?match[2]:'',kind:'planned'};
+ });
+ return [...staff,...arrivals,...Array.from({length:part.open},()=>({name:'TBH',kind:'tbh'}))];
+}
+function projectTable(host,parts){
+ const slots=Math.max(1,...parts.map(p=>memberCells(p).length));
+ const t=node('table',''), head=t.createTHead().insertRow(), body=t.createTBody();
+ for(const label of ['파트','전체 TO (재직)','명단']){
+  const th=node('th',label);th.scope='col';if(label==='명단')th.colSpan=slots;head.append(th);
+ }
+ const groups=new Map();
+ parts.forEach(p=>{const key=p.parent||p.team;if(!groups.has(key))groups.set(key,[]);groups.get(key).push(p);});
+ for(const [name,rows] of groups){
+  const nested=rows.some(p=>p.parent);
+  if(nested){const tr=body.insertRow();tr.className='parent';tr.append(node('th',name),node('td',rows.reduce((s,p)=>s+p.to,0)+' ('+rows.reduce((s,p)=>s+p.hc,0)+')'));const rest=node('td','하위 파트 합계');rest.colSpan=slots;tr.append(rest);}
+  for(const p of rows){const tr=body.insertRow();const label=node('th',nested?'↳ '+(p.team===name?'직속':p.team):p.team);label.scope='row';tr.append(label,node('td',p.to+' ('+p.hc+')'));
+   const members=memberCells(p);
+   for(let i=0;i<slots;i++){
+    const member=members[i],td=node('td',member?member.name:'');td.className='person'+(member?' '+member.kind:'');
+    if(member && member.kind==='planned')td.append(node('small','입사예정'+(member.date?' '+member.date:'')));
+    tr.append(td);
+   }
+  }
+ }
+ host.replaceChildren(t);
 }
 function render(){const pick=el('project').value,parts=data.parts.filter(r=>!pick||r.project===pick);el('cards').replaceChildren(...[['전체 TO','to'],['재직자','hc'],['채용 중','open'],['입사 예정','planned']].map(([label,k])=>{const n=node('div',label);n.className='card';n.append(node('b',parts.reduce((s,r)=>s+r[k],0)+'명'));return n;}));const panels=el('parts');panels.replaceChildren();
 for(const project of new Set(parts.map(r=>r.project))){
@@ -19,9 +45,9 @@ for(const project of new Set(parts.map(r=>r.project))){
  const section=node('section','');section.className='projectboard panel';
  const h=node('h3',project);h.append(node('small','전체 TO '+sum('to')+'명 (재직 '+sum('hc')+'명)'));
  const body=node('div','');section.append(h,body);panels.append(section);
- table(body,['파트','전체 TO (재직)','재직자 명단','입사 예정자 · 예정일'],group.map(rosterRow));
+ projectTable(body,group);
 }
 const start=el('from').value,end=el('until').value;if(!start||!end||start>end){el('report').textContent='조회 기간을 확인하세요.';return;}const rows=data.daily.filter(r=>(!pick||pick===r.project)&&start<=r.day&&r.day<=end).sort((a,b)=>b.day.localeCompare(a.day));table('report',['입사일','프로젝트','완료 인원'],[...rows.map(r=>[r.day,r.project,r.count]),['합계','',rows.reduce((s,r)=>s+r.count,0)]]);}
-async function load(){if(!DATA_URL){el('status').textContent='config.js에 웹 앱 주소를 입력하면 시트가 연결됩니다.';return;}el('reload').disabled=true;el('status').textContent='불러오는 중…';try{const response=await fetch(DATA_URL,{cache:'no-store'});if(!response.ok)throw Error();const d=await response.json();if(!Array.isArray(d.parts)||!Array.isArray(d.daily))throw Error();data=d;const s=el('project'),old=s.value;s.replaceChildren(new Option('전체 프로젝트',''));for(const name of new Set([...d.parts,...d.daily].map(r=>r.project)))s.add(new Option(name,name));s.value=[...s.options].some(o=>o.value===old)?old:'';render();el('status').textContent=d.rosterVersion===1?'조회 시각 '+new Date().toLocaleString('ko-KR'):'기존 집계 서버에 연결됐습니다. Apps Script에서 명단 포함 버전을 새 버전으로 배포해 주세요.';}catch{el('status').textContent='최신 데이터를 불러오지 못했습니다. 웹 앱 주소와 공개 접근 설정을 확인하세요.';}finally{el('reload').disabled=false;}}
+async function load(){if(!DATA_URL){el('status').textContent='config.js에 웹 앱 주소를 입력하면 시트가 연결됩니다.';return;}el('reload').disabled=true;el('status').textContent='불러오는 중…';try{const response=await fetch(DATA_URL,{cache:'no-store'});if(!response.ok)throw Error();const d=await response.json();if(!Array.isArray(d.parts)||!Array.isArray(d.daily))throw Error();data=d;const s=el('project'),old=s.value;s.replaceChildren(new Option('전체 프로젝트',''));for(const name of new Set([...d.parts,...d.daily].map(r=>r.project)))s.add(new Option(name,name));s.value=[...s.options].some(o=>o.value===old)?old:'';render();el('status').textContent=d.rosterVersion===2?'조회 시각 '+new Date().toLocaleString('ko-KR'):'기존 집계 서버에 연결됐습니다. Apps Script에서 명단 포함 버전을 새 버전으로 배포해 주세요.';}catch{el('status').textContent='최신 데이터를 불러오지 못했습니다. 웹 앱 주소와 공개 접근 설정을 확인하세요.';}finally{el('reload').disabled=false;}}
 el('week').onclick=()=>setWeek(0);el('prev').onclick=()=>setWeek(-7);for(const id of ['project','from','until'])el(id).onchange=()=>{if(data)render();};el('reload').onclick=load;setWeek(0);load();
 </script></html>
