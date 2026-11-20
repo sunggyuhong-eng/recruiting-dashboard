@@ -1,53 +1,73 @@
-<!doctype html><html lang="ko"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>채용 대시보드</title>
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#f6f8fa">
+<title>채용 현황</title>
 <style>
-*{box-sizing:border-box}body{margin:0;background:#f5f7f7;color:#173536;font:16px/1.5 "Malgun Gothic",sans-serif}main{max-width:1080px;margin:auto;padding:44px 20px}header,.actions,.dates{display:flex;align-items:center;gap:10px;flex-wrap:wrap}header{justify-content:space-between}h1{letter-spacing:-2px;font-size:36px;margin:0}h2{font-size:21px;margin:30px 0 12px}button,select,input{font:inherit;padding:7px 10px;border:1px solid #c9d5d3;border-radius:7px;background:white}button{cursor:pointer}.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}.card,.panel{background:white;border:1px solid #d8e2e0;border-radius:12px}.card{padding:17px;color:#456460}.card b{display:block;color:#174c44;font-size:31px}.panel{overflow:auto}table{width:100%;border-collapse:collapse;text-align:center;white-space:nowrap}td,th{padding:10px;border-bottom:1px solid #e9eeee}th{background:#e8f1ee}#status{font-size:14px;color:#536562}.dates{margin-bottom:10px}@media(max-width:690px){.cards{grid-template-columns:1fr 1fr}main{padding:24px 12px}}
-.sectionhead{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:12px}.roster{color:#15594f;font-weight:bold}.projectboard{margin:12px 0 22px}.projectboard h3{margin:0;padding:14px 18px;background:#173e3c;color:white;font-size:18px}.projectboard h3 small{font-size:14px;font-weight:normal;margin-left:16px}main{max-width:1600px}.projectboard{border-radius:8px}.projectboard table{font-size:14px}.projectboard td,.projectboard th{border:1px solid #cbd7d4;padding:12px 14px;vertical-align:middle;text-align:center}.projectboard tbody th{background:#f6f9f8;text-align:left;min-width:190px;font-weight:500}.projectboard .person{min-width:98px;white-space:nowrap}.projectboard .tbh{color:#a96810;background:#fffaf0;font-weight:600}.projectboard .arrival{min-width:220px;white-space:pre-line;color:#236c91;font-size:13px}.projectboard .parent th,.projectboard .parent td{background:#e4efeb;font-weight:700;border-top:2px solid #a9beb7}.projectboard .parent td:last-child{text-align:left;color:#56736b;font-size:12px;font-weight:400}.projectboard thead th{background:#edf3f1;font-weight:700}.projectboard td:nth-child(2){min-width:130px}.projectboard .planned{background:#edf6fc;color:#246785}.projectboard .planned small{display:block;font-size:11px;white-space:nowrap;margin-top:3px}.projectboard .person{min-width:105px}</style><main><header><h1>채용 대시보드</h1><div class="actions"><select id="project" aria-label="프로젝트"><option value="">전체 프로젝트</option></select><button id="reload">새로고침</button></div></header><p id="status" role="status"></p><section class="cards" id="cards"></section><div class="sectionhead"><h2>프로젝트별 인원 보드</h2><a class="roster" href="https://docs.google.com/spreadsheets/d/1c0x-dBPGGjDTPAXiO84-H-iwytpwy3WOAG05ogsXBuk/edit#gid=823401" target="_blank" rel="noopener">시트에서 명단 보기 ↗</a></div><div id="parts"></div><h2>기간별 채용완료</h2><div class="dates"><button id="week">이번 주</button><button id="prev">지난주</button><label>시작일 <input id="from" type="date"></label><label>종료일 <input id="until" type="date"></label></div><div class="panel" id="report"></div></main><script src="config.js"></script><script>
-const el=id=>document.getElementById(id);
-let data;
-function node(tag,value){const n=document.createElement(tag);n.textContent=value;return n;}
-function table(id,headers,rows){const t=document.createElement('table'),h=t.createTHead().insertRow(),b=t.createTBody();headers.forEach(v=>h.append(node('th',v)));for(const row of rows){const r=b.insertRow();row.forEach(v=>r.append(node('td',v)));}if(!rows.length){const c=b.insertRow().insertCell();c.colSpan=headers.length;c.textContent='해당 기록이 없습니다.';}(typeof id==="string"?el(id):id).replaceChildren(t);}
-function setWeek(offset){const date=new Date(new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Seoul'}).format(new Date())+'T00:00:00Z');date.setUTCDate(date.getUTCDate()-(date.getUTCDay()+6)%7+offset);el('from').value=date.toISOString().slice(0,10);date.setUTCDate(date.getUTCDate()+6);el('until').value=date.toISOString().slice(0,10);if(data)render();}
-function people(part){return (part.staff||'').split(/\s*·\s*|\r?\n/).map(s=>s.trim()).filter(Boolean);}
-function memberCells(part){
- const staff=people(part).map(name=>({name,kind:'staff'}));
- const arrivals=(part.arrivals||'').split(/\r?\n/).map(s=>s.trim()).filter(Boolean).map(s=>{
-  const match=s.match(/^(.*) \((\d{4}-\d{2}-\d{2})\)$/);
-  return {name:match?match[1]:s,date:match?match[2]:'',kind:'planned'};
- });
- return [...staff,...arrivals,...Array.from({length:part.open},()=>({name:'TBH',kind:'tbh'}))];
-}
-function projectTable(host,parts){
- const slots=Math.max(1,...parts.map(p=>memberCells(p).length));
- const t=node('table',''), head=t.createTHead().insertRow(), body=t.createTBody();
- for(const label of ['파트','전체 TO (재직)','명단']){
-  const th=node('th',label);th.scope='col';if(label==='명단')th.colSpan=slots;head.append(th);
- }
- const groups=new Map();
- parts.forEach(p=>{const key=p.parent||p.team;if(!groups.has(key))groups.set(key,[]);groups.get(key).push(p);});
- for(const [name,rows] of groups){
-  const nested=rows.some(p=>p.parent);
-  if(nested){const tr=body.insertRow();tr.className='parent';tr.append(node('th',name),node('td',rows.reduce((s,p)=>s+p.to,0)+' ('+rows.reduce((s,p)=>s+p.hc,0)+')'));const rest=node('td','하위 파트 합계');rest.colSpan=slots;tr.append(rest);}
-  for(const p of rows){const tr=body.insertRow();const label=node('th',nested?'↳ '+(p.team===name?'직속':p.team):p.team);label.scope='row';tr.append(label,node('td',p.to+' ('+p.hc+')'));
-   const members=memberCells(p);
-   for(let i=0;i<slots;i++){
-    const member=members[i],td=node('td',member?member.name:'');td.className='person'+(member?' '+member.kind:'');
-    if(member && member.kind==='planned')td.append(node('small','입사예정'+(member.date?' '+member.date:'')));
-    tr.append(td);
-   }
-  }
- }
- host.replaceChildren(t);
-}
-function render(){const pick=el('project').value,parts=data.parts.filter(r=>!pick||r.project===pick);el('cards').replaceChildren(...[['전체 TO','to'],['재직자','hc'],['채용 중','open'],['입사 예정','planned']].map(([label,k])=>{const n=node('div',label);n.className='card';n.append(node('b',parts.reduce((s,r)=>s+r[k],0)+'명'));return n;}));const panels=el('parts');panels.replaceChildren();
-for(const project of new Set(parts.map(r=>r.project))){
- const group=parts.filter(r=>r.project===project);
- const sum=k=>group.reduce((n,r)=>n+r[k],0);
- const section=node('section','');section.className='projectboard panel';
- const h=node('h3',project);h.append(node('small','전체 TO '+sum('to')+'명 (재직 '+sum('hc')+'명)'));
- const body=node('div','');section.append(h,body);panels.append(section);
- projectTable(body,group);
-}
-const start=el('from').value,end=el('until').value;if(!start||!end||start>end){el('report').textContent='조회 기간을 확인하세요.';return;}const rows=data.daily.filter(r=>(!pick||pick===r.project)&&start<=r.day&&r.day<=end).sort((a,b)=>b.day.localeCompare(a.day));table('report',['입사일','프로젝트','완료 인원'],[...rows.map(r=>[r.day,r.project,r.count]),['합계','',rows.reduce((s,r)=>s+r.count,0)]]);}
-async function load(){if(!DATA_URL){el('status').textContent='config.js에 웹 앱 주소를 입력하면 시트가 연결됩니다.';return;}el('reload').disabled=true;el('status').textContent='불러오는 중…';try{const response=await fetch(DATA_URL,{cache:'no-store'});if(!response.ok)throw Error();const d=await response.json();if(!Array.isArray(d.parts)||!Array.isArray(d.daily))throw Error();data=d;const s=el('project'),old=s.value;s.replaceChildren(new Option('전체 프로젝트',''));for(const name of new Set([...d.parts,...d.daily].map(r=>r.project)))s.add(new Option(name,name));s.value=[...s.options].some(o=>o.value===old)?old:'';render();el('status').textContent=d.rosterVersion===2?'조회 시각 '+new Date().toLocaleString('ko-KR'):'기존 집계 서버에 연결됐습니다. Apps Script에서 명단 포함 버전을 새 버전으로 배포해 주세요.';}catch{el('status').textContent='최신 데이터를 불러오지 못했습니다. 웹 앱 주소와 공개 접근 설정을 확인하세요.';}finally{el('reload').disabled=false;}}
-el('week').onclick=()=>setWeek(0);el('prev').onclick=()=>setWeek(-7);for(const id of ['project','from','until'])el(id).onchange=()=>{if(data)render();};el('reload').onclick=load;setWeek(0);load();
-</script></html>
+:root{--ink:#191f28;--sub:#687385;--line:#e7ebf0;--blue:#3182f6;--blue-soft:#edf5ff;--green:#16866b;--green-soft:#eaf8f3;--canvas:#f6f8fa;--white:#fff;--shadow:0 8px 24px rgba(18,38,63,.045)}
+*{box-sizing:border-box}body{margin:0;background:var(--canvas);color:var(--ink);font:15px/1.55 -apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;letter-spacing:-.02em;-webkit-font-smoothing:antialiased}button,select{font:inherit}button{cursor:pointer}a{color:inherit}main{max-width:1120px;margin:auto;padding:48px 28px 72px}.topbar{display:flex;justify-content:space-between;align-items:center;gap:20px;margin-bottom:35px}.brand{display:flex;align-items:center;gap:11px}.brand-mark{width:34px;height:34px;border-radius:11px;background:var(--blue);display:grid;place-items:center;color:white;font-weight:800;font-size:17px}.brand-name{font-size:15px;font-weight:750;letter-spacing:-.04em}.top-actions{display:flex;align-items:center;gap:9px}.select-wrap{position:relative}.select-wrap:after{content:"⌄";position:absolute;right:13px;top:8px;color:var(--sub);pointer-events:none}.select-wrap select{appearance:none;border:1px solid var(--line);background:#fff;border-radius:10px;padding:9px 34px 9px 13px;color:var(--ink);font-size:13px}.sheet-link,.icon-button{border:1px solid var(--line);background:#fff;border-radius:10px;color:#4b5666;text-decoration:none;padding:9px 12px;font-size:13px;font-weight:650}.icon-button{width:38px;height:38px;padding:0;display:grid;place-items:center;font-size:17px}.hero{margin-bottom:28px}.eyebrow{font-size:13px;color:var(--blue);font-weight:750;margin:0 0 8px}.hero h1{font-size:34px;line-height:1.25;letter-spacing:-.065em;margin:0;font-weight:780}.hero-copy{color:var(--sub);margin:10px 0 0;font-size:14px}.week-panel,.project-list{background:var(--white);border:1px solid var(--line);border-radius:20px;box-shadow:var(--shadow)}.week-panel{padding:24px 26px 22px;margin-bottom:44px}.panel-head{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:20px}.panel-head h2,.section-title{font-size:18px;letter-spacing:-.045em;margin:0;font-weight:750}.week-switch{display:flex;align-items:center;gap:8px;color:var(--sub);font-size:13px}.week-switch button{border:0;background:transparent;color:#5e6878;border-radius:8px;width:30px;height:30px;font-size:18px}.week-switch button:hover{background:#f1f4f7}.week-range{font-weight:650;color:#4d5969;min-width:108px;text-align:center}.kpis{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.kpi{padding:19px 20px 17px;background:#f8fafc;border-radius:15px;min-height:112px}.kpi-label{font-size:13px;color:var(--sub);font-weight:600}.kpi-value{font-size:29px;font-weight:780;letter-spacing:-.06em;line-height:1.2;margin-top:9px}.kpi-value span{font-size:16px;margin-left:4px;letter-spacing:-.03em}.kpi-note{font-size:12px;color:#8993a2;margin-top:5px}.weekly-list{border-top:1px solid var(--line);margin-top:19px;padding-top:16px}.weekly-list-head{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:9px}.weekly-list-head strong{font-size:13px}.weekly-list-head span{font-size:12px;color:#8993a2}.weekly-people{display:flex;flex-wrap:wrap;gap:8px}.person-chip{display:inline-flex;align-items:center;gap:8px;border:1px solid #e4ebf3;border-radius:10px;background:white;padding:8px 11px;font-size:13px}.person-chip b{font-weight:700}.person-chip small{font-size:11px;color:#778294}.empty-inline{font-size:13px;color:#8b95a3;padding:5px 0}.section-head{display:flex;justify-content:space-between;align-items:end;margin-bottom:14px;gap:16px}.section-title-wrap .eyebrow{margin-bottom:5px}.section-hint{color:#8a94a3;font-size:12px;margin:0 0 2px}.project-list{overflow:hidden}.project-row+ .project-row{border-top:1px solid var(--line)}.project-row details{width:100%}.project-row summary{list-style:none;display:flex;align-items:center;gap:15px;padding:18px 22px;cursor:pointer;min-height:76px}.project-row summary::-webkit-details-marker{display:none}.project-row summary:hover{background:#fbfcfd}.project-name{font-size:16px;font-weight:750;min-width:120px;letter-spacing:-.04em}.project-meta{display:flex;align-items:center;gap:8px;flex:1;flex-wrap:wrap}.metric-pill{display:inline-flex;align-items:center;gap:6px;border-radius:8px;padding:5px 9px;font-size:12px;font-weight:650;background:var(--blue-soft);color:#2769c6}.metric-pill.expected{background:var(--green-soft);color:var(--green)}.metric-pill em{font-style:normal;font-weight:780}.chevron{width:28px;height:28px;border-radius:50%;background:#f2f4f7;color:#727d8d;display:grid;place-items:center;font-size:14px;transition:transform .18s ease;flex:0 0 auto}details[open] .chevron{transform:rotate(180deg)}.project-body{padding:0 22px 22px}.parts{border-top:1px solid var(--line)}.part-row{display:grid;grid-template-columns:minmax(140px,1fr) 150px minmax(250px,2fr);gap:14px;align-items:start;padding:13px 4px;border-bottom:1px solid #f0f2f5}.part-row:last-child{border-bottom:0}.part-name{font-size:13px;font-weight:700;padding-top:3px}.open-count{font-size:13px;color:#344254}.open-count strong{font-size:15px;color:#216ddd}.part-people{display:flex;flex-wrap:wrap;gap:6px}.small-person{display:inline-flex;gap:7px;align-items:center;background:#f3f8ff;color:#36689f;padding:5px 8px;border-radius:7px;font-size:12px}.small-person time{color:#7488a1;font-size:11px}.no-open,.no-people{font-size:12px;color:#a0a8b3}.part-empty{padding:20px 4px;color:#8993a2;font-size:13px}.status-line{display:flex;justify-content:center;color:#8b95a3;font-size:12px;margin-top:18px;min-height:22px}.status-dot{width:6px;height:6px;border-radius:100%;background:#45ba86;display:inline-block;margin:0 7px 1px 0}.error{color:#d04b4b}.footer-note{text-align:center;color:#a0a8b3;font-size:11px;margin-top:25px}
+@media(max-width:700px){main{padding:26px 14px 48px}.topbar{align-items:flex-start;margin-bottom:29px}.brand-name{font-size:14px}.top-actions{gap:6px}.sheet-link{font-size:12px;padding:9px}.select-wrap select{max-width:125px;font-size:12px}.hero h1{font-size:29px}.week-panel{padding:19px 16px 17px;border-radius:17px;margin-bottom:34px}.panel-head{align-items:flex-start;flex-direction:column;margin-bottom:14px}.kpis{gap:8px}.kpi{padding:14px 11px;min-height:98px;border-radius:12px}.kpi-label{font-size:11px}.kpi-value{font-size:24px}.kpi-value span{font-size:13px}.kpi-note{font-size:10px}.weekly-list-head{align-items:flex-start;flex-direction:column;gap:3px}.person-chip{font-size:12px;padding:7px 9px}.section-head{align-items:flex-start;flex-direction:column}.section-hint{font-size:11px}.project-row summary{padding:15px 14px;gap:9px;min-height:70px}.project-name{min-width:82px;font-size:14px}.project-meta{gap:5px}.metric-pill{font-size:11px;padding:5px 7px}.project-body{padding:0 14px 15px}.part-row{grid-template-columns:minmax(95px,.8fr) minmax(93px,.7fr);gap:7px;padding:12px 2px}.part-name{font-size:12px}.open-count{font-size:11px;text-align:right}.open-count strong{font-size:13px}.part-people{grid-column:1/-1;padding-left:2px}.chevron{width:25px;height:25px}}
+@media(max-width:390px){.top-actions{flex-wrap:wrap;justify-content:flex-end}.sheet-link{display:none}.kpi-value{font-size:21px}.project-name{min-width:70px}.metric-pill{font-size:10px}}
+</style>
+</head>
+<body>
+<main>
+  <header class="topbar">
+    <div class="brand"><span class="brand-mark" aria-hidden="true">K</span><span class="brand-name">KONG · TALENT</span></div>
+    <div class="top-actions">
+      <div class="select-wrap"><select id="projectFilter" aria-label="프로젝트 선택"><option value="">전체 프로젝트</option></select></div>
+      <a class="sheet-link" href="https://docs.google.com/spreadsheets/d/1c0x-dBPGGjDTPAXiO84-H-iwytpwy3WOAG05ogsXBuk/edit" target="_blank" rel="noopener">채용 시트 ↗</a>
+      <button class="icon-button" id="refresh" type="button" aria-label="새로고침" title="새로고침">↻</button>
+    </div>
+  </header>
+
+  <section class="hero">
+    <p class="eyebrow">TALENT OVERVIEW</p>
+    <h1>채용 현황</h1>
+    <p class="hero-copy">채용 중인 자리와 입사 예정자를 한눈에 확인하세요.</p>
+  </section>
+
+  <section class="week-panel" aria-labelledby="weeklyTitle">
+    <div class="panel-head">
+      <div><p class="eyebrow">WEEKLY REPORT</p><h2 id="weeklyTitle">이번 주 채용 요약</h2></div>
+      <div class="week-switch"><button id="prevWeek" type="button" aria-label="이전 주">‹</button><span class="week-range" id="weekRange"></span><button id="nextWeek" type="button" aria-label="다음 주">›</button></div>
+    </div>
+    <div class="kpis" id="kpis"></div>
+    <div class="weekly-list">
+      <div class="weekly-list-head"><strong>이번 주 입사 예정자</strong><span id="weeklyHint"></span></div>
+      <div class="weekly-people" id="weeklyPeople"></div>
+    </div>
+  </section>
+
+  <section aria-labelledby="projectsTitle">
+    <div class="section-head">
+      <div class="section-title-wrap"><p class="eyebrow">BY PROJECT</p><h2 class="section-title" id="projectsTitle">프로젝트별 채용 현황</h2></div>
+      <p class="section-hint">프로젝트를 누르면 파트별 상세 내용을 볼 수 있어요.</p>
+    </div>
+    <div class="project-list" id="projects"></div>
+  </section>
+  <div class="status-line" id="status" role="status" aria-live="polite"></div>
+  <p class="footer-note">데이터는 연결된 채용 시트를 기준으로 표시됩니다.</p>
+</main>
+<script src="config.js"></script>
+<script>
+const API_URL=(typeof DATA_URL!=='undefined'&&DATA_URL)?DATA_URL:(window.DATA_URL||'');
+const $=id=>document.getElementById(id);
+let data=null,weekOffset=0;
+const fmtDate=s=>{if(!s)return '';const d=new Date(`${s}T00:00:00+09:00`);return new Intl.DateTimeFormat('ko-KR',{timeZone:'Asia/Seoul',month:'numeric',day:'numeric',weekday:'short'}).format(d)};
+const weekBounds=()=>{const now=new Date();const local=new Date(new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Seoul'}).format(now)+'T00:00:00Z');const weekday=(local.getUTCDay()+6)%7;local.setUTCDate(local.getUTCDate()-weekday+weekOffset*7);const start=local.toISOString().slice(0,10);local.setUTCDate(local.getUTCDate()+6);return{start,end:local.toISOString().slice(0,10)}};
+const within=(date,start,end)=>Boolean(date&&start<=date&&date<=end);
+const activeEntrants=()=>data?.entrants||[];
+function make(tag,text,className){const n=document.createElement(tag);if(text!==undefined)n.textContent=text;if(className)n.className=className;return n;}
+function addKpi(label,value,note){const card=make('div',undefined,'kpi');card.append(make('div',label,'kpi-label'));const v=make('div',undefined,'kpi-value');v.append(document.createTextNode(String(value)),make('span','명'));card.append(v,make('div',note,'kpi-note'));return card;}
+function renderWeekly(projects){const {start,end}=weekBounds();$('weekRange').textContent=`${fmtDate(start)} – ${fmtDate(end)}`;const projectSet=new Set(projects.map(p=>p.project));const relevant=data.parts.filter(x=>projectSet.has(x.project));const open=relevant.reduce((sum,x)=>sum+(Number(x.open)||0),0);const incoming=activeEntrants().filter(x=>x.status==='입사예정'&&within(x.date,start,end)&&projectSet.has(x.project));const completed=activeEntrants().filter(x=>x.status==='채용완료'&&within(x.date,start,end)&&projectSet.has(x.project));$('kpis').replaceChildren(addKpi('채용 중인 TO',open,'현재 진행 중인 승인 인원'),addKpi('이번 주 입사 예정',incoming.length,'예정일 기준'),addKpi('이번 주 입사 완료',completed.length,'입사 처리 완료 기준'));
+ const list=$('weeklyPeople');list.replaceChildren();$('weeklyHint').textContent=`${fmtDate(start)}–${fmtDate(end)} 예정`;if(!incoming.length){list.append(make('div','이번 주 입사 예정자가 없습니다.','empty-inline'));return;}for(const person of incoming.sort((a,b)=>(a.date||'').localeCompare(b.date||''))){const chip=make('div',undefined,'person-chip');chip.append(make('b',person.name),make('small',`${person.project} · ${person.team} · ${fmtDate(person.date)}`));list.append(chip);}}
+function renderProjects(){if(!data)return;const filter=$('projectFilter').value;const all=data.parts||[];const projectNames=[...new Set(all.map(x=>x.project))];const filtered=all.filter(x=>!filter||x.project===filter);const projects=projectNames.filter(p=>!filter||p===filter).map(project=>({project,parts:filtered.filter(x=>x.project===project)}));renderWeekly(projects);const root=$('projects');root.replaceChildren();if(!projects.length){root.append(make('div','표시할 프로젝트가 없습니다.','part-empty'));return;}const entrants=activeEntrants().filter(x=>x.status==='입사예정');for(const item of projects){const totalOpen=item.parts.reduce((s,x)=>s+(Number(x.open)||0),0);const projectPeople=entrants.filter(x=>x.project===item.project);const section=make('section',undefined,'project-row');const details=document.createElement('details');const summary=document.createElement('summary');summary.append(make('span',item.project,'project-name'));const metrics=make('span',undefined,'project-meta');metrics.append(make('span',undefined,'metric-pill'));metrics.lastChild.append(document.createTextNode('채용 중 '),make('em',`${totalOpen}명`));metrics.append(make('span',undefined,'metric-pill expected'));metrics.lastChild.append(document.createTextNode('입사 예정 '),make('em',`${projectPeople.length}명`));summary.append(metrics,make('span','⌄','chevron'));const body=make('div',undefined,'project-body');const rows=make('div',undefined,'parts');const visible=item.parts.filter(part=>(Number(part.open)||0)>0||(Number(part.planned)||0)>0||entrants.some(x=>x.project===item.project&&x.team===part.team));if(!visible.length){rows.append(make('div','현재 채용 중이거나 입사 예정인 파트가 없습니다.','part-empty'));}else for(const part of visible){const line=make('div',undefined,'part-row');line.append(make('div',part.team,'part-name'));const count=make('div',undefined,'open-count');count.append(document.createTextNode('채용 중 '),make('strong',`${Number(part.open)||0}명`));line.append(count);const people=make('div',undefined,'part-people');const partPeople=entrants.filter(x=>x.project===item.project&&x.team===part.team).sort((a,b)=>(a.date||'').localeCompare(b.date||''));if(partPeople.length){for(const person of partPeople){const tag=make('span',undefined,'small-person');tag.append(document.createTextNode(person.name),make('time',fmtDate(person.date)));people.append(tag);}}else people.append(make('span','입사 예정자 없음','no-people'));line.append(people);rows.append(line);}body.append(rows);details.append(summary,body);section.append(details);root.append(section);}}
+function setStatus(message,error=false){const n=$('status');n.replaceChildren();if(!error){n.append(make('span',undefined,'status-dot'));}n.append(document.createTextNode(message));if(error)n.classList.add('error');else n.classList.remove('error');}
+async function load(){if(!API_URL){setStatus('config.js에 공개 웹 앱 주소를 연결하면 시트 데이터가 표시됩니다.',true);return;}const button=$('refresh');button.disabled=true;setStatus('최신 데이터를 불러오는 중입니다.');try{const response=await fetch(API_URL,{cache:'no-store'});if(!response.ok)throw new Error('network');const next=await response.json();if(!Array.isArray(next.parts)||!Array.isArray(next.entrants))throw new Error('schema');data=next;const select=$('projectFilter'),previous=select.value;select.replaceChildren(new Option('전체 프로젝트',''));for(const name of new Set(data.parts.map(x=>x.project)))select.add(new Option(name,name));select.value=[...select.options].some(x=>x.value===previous)?previous:'';renderProjects();setStatus(`시트 기준으로 갱신 · ${new Date().toLocaleString('ko-KR',{timeZone:'Asia/Seoul'})}`);}catch{setStatus('데이터를 불러오지 못했습니다. 웹 앱 주소와 공개 접근 설정을 확인해 주세요.',true);}finally{button.disabled=false;}}
+$('refresh').addEventListener('click',load);$('projectFilter').addEventListener('change',renderProjects);$('prevWeek').addEventListener('click',()=>{weekOffset--;if(data)renderProjects();});$('nextWeek').addEventListener('click',()=>{weekOffset++;if(data)renderProjects();});load();
+</script>
+</body>
+</html>

@@ -8,28 +8,39 @@ function doGet() {
       return groups.get(key);
     }
     function number(value) {
-      if (value === '') return 0;
+      if (value === '' || value === null) return 0;
       if (typeof value !== 'number' || !Number.isSafeInteger(value) || value < 0) throw Error('숫자 확인');
       return value;
     }
-    const roster = book.getSheetByName('파트별 인원 보드');
-    if (roster.getLastRow() >= 4) {
-      const range = roster.getRange(4,1,roster.getLastRow()-3,8);
-      for (const row of range.getValues()) {
-        if (!row[0] || !row[1]) continue;
-        const item = group(String(row[0]),String(row[1]));
-        item.to=number(row[2]); item.hc=number(row[3]);
-        item.staff=String(row[5]||''); item.arrivals=String(row[6]||'');
-        item.parent=String(row[7]||'');
+    function isoDate(value) {
+      if (value instanceof Date) return Utilities.formatDate(value, 'Asia/Seoul', 'yyyy-MM-dd');
+      return value ? String(value).slice(0,10) : '';
+    }
+    for (const sheet of book.getSheets()) {
+      if (sheet.isSheetHidden() || sheet.getRange('A3').getValue() !== '파트' || sheet.getRange('B3').getValue() !== '전체 TO') continue;
+      for (const [team,to,hc] of sheet.getRange('A4:C33').getValues()) {
+        if (!team) continue;
+        const g = group(sheet.getName(), String(team));
+        g.to += number(to);
+        g.hc += number(hc);
       }
     }
     const reg = book.getSheetByName('채용승인신청서');
     const length = reg.getLastRow()-3;
-    if (length>0) for (const row of reg.getRange(4,2,length,10).getValues()) {
+    // 등록부: C=프로젝트, D=파트, I=채용 중, K=입사 예정 인원
+    if (length>0) for (const row of reg.getRange(4,3,length,10).getValues()) {
       if (!row[0]) continue;
       const g = group(String(row[0]),String(row[1] || '파트 미지정'));
       g.open += number(row[6]);
-      g.planned += number(row[9]);
+      g.planned += number(row[8]);
+    }
+    const entrants = [];
+    const entrantLength = Math.max(0, reg.getLastRow()-3);
+    if (entrantLength) {
+      for (const [code,name,date,project,team,status] of reg.getRange(4,14,entrantLength,6).getValues()) {
+        if (!name || !project || !team || !['입사예정','채용완료'].includes(status)) continue;
+        entrants.push({name:String(name), date:isoDate(date), project:String(project), team:String(team), status:String(status)});
+      }
     }
     const history = book.getSheetByName('채용 히스토리');
     const daily = new Map();
@@ -40,7 +51,7 @@ function doGet() {
       if (!daily.has(key)) daily.set(key,{day,project,count:0});
       daily.get(key).count++;
     }
-    return dashboardJson({rosterVersion:2,parts:Array.from(groups.values()),daily:Array.from(daily.values())});
+    return dashboardJson({rosterVersion:2, parts:Array.from(groups.values()), entrants, daily:Array.from(daily.values())});
   } catch (err) {
     console.error(err);
     return dashboardJson({error:true});
