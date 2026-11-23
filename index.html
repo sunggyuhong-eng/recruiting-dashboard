@@ -51,6 +51,7 @@ body{font-family:Inter,"Noto Sans KR",-apple-system,BlinkMacSystemFont,"Apple SD
 .roster-table th,.roster-table td{padding:15px 16px;font-size:14px}.roster-table th{font-size:12px}.roster-table th:nth-child(2),.roster-table td:nth-child(2){text-align:center}
 .part-name{font-size:15px}.part-parent{font-size:11px}.combined-count{display:inline-flex;align-items:baseline;gap:6px;white-space:nowrap;font-variant-numeric:tabular-nums}.combined-count strong{font-size:16px;color:#fff}.combined-count span{font-size:14px;color:#e4e8f0}
 .people{gap:8px}.person{min-height:35px;padding:7px 11px;font-size:14px;line-height:1.35}.person time,.expected-label{font-size:11px}.missing{font-size:13px}
+.person.vacant{background:transparent;border:1px dashed rgba(255,255,255,.22);color:#c8cedb}
 @media(max-width:720px){.roster-table{min-width:680px}.roster-table th,.roster-table td{padding:13px 12px}.roster-table th:nth-child(1){width:20%}.roster-table th:nth-child(2){width:18%}.roster-table th:nth-child(3){width:62%}}
 </style>
 </head>
@@ -121,9 +122,9 @@ function rosterTable(project){
     for(const person of visibleRoster){
       const linked=registered.find(e=>person.name&&e.name.trim()===person.name.trim()&&(!person.code||!e.code||String(e.code)===String(person.code)));
       const state=linked?.status||person.status||'재직';
-      if(!person.name&&state!=='TBH')continue;
-      const chip=el('span',undefined,`person${state==='TBH'?' tbh':state==='입사예정'?' expected':''}`);
-      chip.append(document.createTextNode(person.name||'TBH'));
+      if(!person.name&&!['TBH','공석'].includes(state))continue;
+      const chip=el('span',undefined,`person${state==='TBH'?' tbh':state==='입사예정'?' expected':state==='공석'?' vacant':''}`);
+      chip.append(document.createTextNode(person.name||(state==='공석'?'공석':'TBH')));
       if(state==='입사예정'){chip.append(el('span','(입사예정)','expected-label'));chip.append(el('time',fmtDate(linked?.date||person.date)));}
       if(person.code&&state!=='TBH')chip.title=`채용승인 ${person.code}${person.reason?' · '+person.reason:''}`;
       people.append(chip);
