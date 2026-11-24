@@ -1,0 +1,387 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#f5f8fc">
+<title>KONGSTUDIOS Recruiting Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  color-scheme:light;
+  --ink:#17243a;
+  --muted:#56657b;
+  --quiet:#66758b;
+  --line:rgba(58,83,125,.14);
+  --blue:#165ac4;
+  --lavender:#654fc3;
+  --surface:rgba(255,255,255,.83);
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  margin:0;
+  color:var(--ink);
+  font:16px/1.52 -apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans KR",sans-serif;
+  letter-spacing:-.025em;
+  background:
+    radial-gradient(ellipse 650px 520px at 2% 6%,rgba(188,212,255,.47),transparent 72%),
+    radial-gradient(ellipse 700px 640px at 97% 19%,rgba(222,207,255,.36),transparent 68%),
+    linear-gradient(155deg,#f7f9fd 2%,#eef3fa 54%,#f8f9fd);
+  background-attachment:fixed;
+  -webkit-font-smoothing:antialiased;
+}
+button,select{font:inherit}
+button{cursor:pointer}
+a{color:inherit}
+main{max-width:1560px;margin:0 auto;padding:24px clamp(16px,3.5vw,56px) 76px}
+.eyebrow{margin:0 0 6px;color:var(--blue);font-size:12px;font-weight:750;letter-spacing:.085em}
+.topbar{
+  display:flex;align-items:center;justify-content:space-between;gap:18px;
+  padding:12px 18px;border:1px solid rgba(255,255,255,.9);border-radius:20px;
+  background:rgba(255,255,255,.7);box-shadow:0 8px 28px rgba(37,66,104,.075),inset 0 1px #fff;
+  -webkit-backdrop-filter:blur(18px) saturate(140%);backdrop-filter:blur(18px) saturate(140%);
+}
+.brand{display:flex;align-items:center;gap:13px;min-width:0;border-radius:8px;text-decoration:none}
+.brand-logo{width:82px;height:53px;object-fit:contain;border-radius:9px;background:#060609}
+.brand-copy{display:grid;gap:2px}
+.brand-copy strong{font-size:17px;font-weight:800;letter-spacing:-.045em;line-height:1.1}
+.brand-copy span{font-size:11px;font-weight:650;color:var(--muted);letter-spacing:.065em}
+.top-actions{display:flex;align-items:center;justify-content:flex-end;gap:9px;min-width:0}
+.select-wrap{position:relative}
+.select-wrap::after{content:'⌄';position:absolute;right:14px;top:8px;color:#53647a;pointer-events:none}
+.select-wrap select,.sheet-link,.icon-button,.week-switch button{
+  height:42px;border:1px solid rgba(73,104,150,.16);border-radius:12px;
+  background:rgba(255,255,255,.88);color:var(--ink);box-shadow:0 2px 7px rgba(27,60,107,.035);
+}
+.select-wrap select{appearance:none;max-width:208px;padding:0 35px 0 14px;font-size:14px;font-weight:650;cursor:pointer}
+.select-wrap select option{background:#fff;color:var(--ink)}
+.sheet-link{display:inline-flex;align-items:center;padding:0 15px;text-decoration:none;font-size:14px;font-weight:690;white-space:nowrap}
+.icon-button{width:42px;padding:0;font-size:25px;line-height:1}
+.top-actions :is(select,a,button):hover,.week-switch button:hover{border-color:rgba(22,90,196,.45);background:#fff}
+:is(a,button,select,summary):focus-visible{outline:3px solid #3877d8;outline-offset:3px}
+.refresh-status{color:var(--muted);font-size:12px;font-weight:650;white-space:nowrap}
+.refresh-status.error,.status-line.error{color:#ad2d47}
+.icon-button:disabled{cursor:wait;opacity:.72}
+.icon-button.loading span{display:inline-block;animation:refresh-spin 1s linear infinite}
+@keyframes refresh-spin{to{transform:rotate(360deg)}}
+
+.hero{
+  position:relative;isolation:isolate;overflow:hidden;margin-top:21px;padding:clamp(24px,3vw,38px);
+  border:1px solid rgba(255,255,255,.95);border-radius:27px;
+  background:linear-gradient(125deg,rgba(255,255,255,.92),rgba(255,255,255,.75) 64%,rgba(246,247,255,.86));
+  box-shadow:0 22px 52px rgba(56,81,125,.085),inset 0 1px #fff;
+  -webkit-backdrop-filter:blur(22px);backdrop-filter:blur(22px);
+}
+.hero::before{content:'';position:absolute;z-index:-1;right:-120px;top:-230px;width:600px;height:550px;background:radial-gradient(circle,rgba(189,209,255,.42),rgba(231,220,255,.22) 55%,transparent 72%);pointer-events:none}
+.hero-top{display:flex;align-items:start;justify-content:space-between;gap:18px}
+.hero h1{margin:0;font-size:clamp(25px,2.7vw,34px);font-weight:800;line-height:1.23;letter-spacing:-.06em}
+.week-switch{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:13px;white-space:nowrap}
+.week-switch button{width:34px;height:34px;border-radius:50%;font-size:21px;line-height:1}
+.week-range{min-width:140px;text-align:center;font-weight:680}
+.hero-main{display:grid;grid-template-columns:minmax(210px,.65fr) minmax(0,1.35fr);gap:clamp(22px,4vw,52px);align-items:stretch;margin-top:24px}
+.hero-to{display:flex;align-items:center}
+.hero-number{display:flex;align-items:baseline;gap:12px;color:#12253e;font-size:clamp(82px,8.8vw,126px);font-weight:790;line-height:.95;letter-spacing:-.09em;font-variant-numeric:tabular-nums}
+.hero-number small{font-size:clamp(26px,3vw,37px);font-weight:650;letter-spacing:-.04em}
+.secondary-metrics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.mini-metric{min-width:0;padding:19px 21px;border:1px solid rgba(75,112,173,.11);border-radius:19px;background:rgba(255,255,255,.82);box-shadow:0 6px 20px rgba(62,89,129,.045)}
+.mini-label{color:var(--muted);font-size:14px;font-weight:720}
+.mini-value{margin-top:9px;color:var(--ink);font-size:clamp(36px,3.3vw,50px);font-weight:770;line-height:1;letter-spacing:-.065em;font-variant-numeric:tabular-nums}
+.mini-value span{margin-left:4px;color:var(--muted);font-size:17px;font-weight:600;letter-spacing:-.02em}
+.pipeline-breakdown{display:grid;gap:6px;margin-top:16px}
+.pipeline-breakdown span{display:flex;justify-content:space-between;gap:8px;color:var(--muted);font-size:13px}
+.pipeline-breakdown b{color:var(--ink);font-size:13px;white-space:nowrap}
+.mini-note{margin-top:9px;color:#ad2d47;font-size:12px}
+.weekly-people{display:flex;flex-wrap:wrap;gap:6px;margin-top:13px}
+.weekly-person{display:inline-flex;align-items:center;gap:5px;padding:4px 8px;border-radius:8px;background:#f0f5fb;color:var(--ink);font-size:12px}
+.weekly-person b{font-size:13px}
+.weekly-person small,.weekly-empty{color:var(--muted);font-size:12px}
+.incoming-panel{margin-top:24px;padding-top:20px;border-top:1px solid var(--line)}
+.incoming-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:12px}
+.incoming-head strong{font-size:18px;letter-spacing:-.04em}
+.incoming-head span{color:var(--muted);font-size:14px;font-weight:650}
+.incoming-list{display:flex;flex-wrap:wrap;gap:8px}
+.incoming-person{display:inline-flex;align-items:center;gap:10px;min-height:46px;padding:9px 13px;border:1px solid rgba(101,79,195,.16);border-radius:11px;background:rgba(239,234,255,.68);color:var(--ink);text-align:left;transition:background .15s,border-color .15s}
+.incoming-person:hover{background:#eee8ff;border-color:rgba(101,79,195,.42)}
+.incoming-person b{font-size:14px}
+.incoming-person small{color:#4d4874;font-size:12px}
+.empty{padding:8px 0;color:var(--muted);font-size:14px}
+
+.section-head{display:flex;align-items:end;justify-content:space-between;gap:16px;margin:40px 0 16px}
+.section-head h2{margin:0;font-size:clamp(25px,2.4vw,32px);font-weight:800;line-height:1.2;letter-spacing:-.055em}
+.section-hint{margin:0;color:var(--muted);font-size:13px}
+.project-list{display:grid;gap:10px}
+.project-row{overflow:hidden;border:1px solid rgba(84,109,144,.12);border-radius:18px;background:rgba(255,255,255,.86);box-shadow:0 5px 19px rgba(52,76,120,.045)}
+.project-row:hover{border-color:rgba(42,105,193,.35);box-shadow:0 10px 26px rgba(52,76,120,.075)}
+.project-row:has(details[open]){border-color:rgba(65,114,189,.3);box-shadow:0 14px 35px rgba(50,80,128,.09)}
+.project-row summary{display:flex;align-items:center;gap:14px;min-height:80px;padding:15px 20px;list-style:none;cursor:pointer}
+.project-row summary::-webkit-details-marker{display:none}
+.project-title{display:flex;align-items:center;flex-wrap:wrap;gap:8px 20px;min-width:0;flex:1}
+.project-name{min-width:150px;font-size:20px;font-weight:790;letter-spacing:-.045em}
+.project-open{display:inline-flex;align-items:center;gap:5px;min-height:32px;padding:4px 10px;border-radius:9px;background:#e9f1ff;color:#174d9c;font-size:13px;font-weight:720;white-space:nowrap}
+.project-open b{font-size:16px;font-variant-numeric:tabular-nums}
+.project-open.zero{background:#eef1f5;color:#53647c}
+.project-overview{color:var(--muted);font-size:14px;font-weight:580;white-space:nowrap}
+.project-overview b{color:var(--ink);font-weight:750}
+.project-arrivals{flex-basis:100%;padding-left:calc(150px + 20px);color:#594b90;font-size:13px;line-height:1.35}
+.project-arrivals b{color:#4d388d;font-weight:780}
+.chevron{display:grid;place-items:center;flex:none;width:32px;height:32px;border-radius:50%;background:#f1f4f9;color:#52657f;font-size:18px;transition:transform .18s}
+.project-row details[open] .chevron{transform:rotate(180deg);background:#e9f1ff;color:#1d5ab0}
+.project-body{padding:3px 20px 21px}
+.roster-legend{display:flex;align-items:center;flex-wrap:wrap;gap:7px 15px;margin:3px 0 13px;color:var(--muted);font-size:13px}
+.roster-legend-label{margin-right:2px;color:var(--ink);font-weight:750}
+.legend-item{display:inline-flex;align-items:center;gap:7px;white-space:nowrap}
+.legend-mark{width:11px;height:11px;flex:none;border-radius:4px}
+.legend-mark.tbh{background:#dcecff;border:1px solid #387bd3}
+.legend-mark.expected{background:#eee8ff;border:1px solid #8b6fe1}
+.legend-mark.vacant{border:1px dashed #8292a8}
+.table-scroll{overflow-x:auto;border:1px solid var(--line);border-radius:13px;background:#fff}
+.roster-table{width:100%;min-width:750px;border-collapse:collapse;table-layout:fixed}
+.roster-table th{padding:13px 16px;background:#f5f8fc;color:#506078;font-size:13px;font-weight:750;text-align:left}
+.roster-table td{padding:15px 16px;border-top:1px solid #e9edf4;vertical-align:top;font-size:15px}
+.roster-table th:nth-child(1){width:19%}
+.roster-table th:nth-child(2){width:16%}
+.roster-table th:nth-child(3){width:65%}
+.roster-table th:nth-child(2),.roster-table td:nth-child(2){text-align:center}
+.roster-table tbody tr:hover{background:#f9fbff}
+.roster-table td:first-child{border-right:1px solid #eef1f5}
+.part-name{display:block;color:#152840;font-size:16px;font-weight:780;line-height:1.4;overflow-wrap:anywhere}
+.part-parent{display:block;margin-top:4px;color:var(--quiet);font-size:12px}
+.combined-count{display:inline-flex;align-items:baseline;gap:5px;white-space:nowrap;font-variant-numeric:tabular-nums}
+.combined-count strong{color:var(--ink);font-size:16px}
+.combined-count span{color:var(--muted);font-size:14px}
+.people{display:flex;flex-wrap:wrap;align-items:center;gap:7px 12px}
+.person{display:inline-flex;align-items:center;gap:5px;min-height:31px;color:var(--ink);font-size:14px;font-weight:600;white-space:nowrap}
+.person.tbh,.person.expected,.person.vacant{min-height:34px;padding:5px 9px;border-radius:8px}
+.person.tbh{border:1px solid #b8d8ff;background:#e9f3ff;color:#174f9d;font-weight:760}
+.person.expected{border:1px solid #d4c5ff;background:#f2edff;color:#533aa3;font-weight:750}
+.person.vacant{border:1px dashed #a5b0bf;background:#f8fafc;color:#526278}
+.person time,.expected-label{color:inherit;font-size:13px;font-weight:650}
+.missing,.project-empty{color:var(--quiet);font-size:13px}
+.project-empty{padding:18px}
+.approval-section{margin-top:26px;padding:22px;border:1px solid var(--line);border-radius:15px;background:#fbfcff}
+.approval-head{display:flex;align-items:end;justify-content:space-between;gap:13px;margin-bottom:17px}
+.approval-heading{min-width:0}
+.approval-kicker{display:block;margin-bottom:4px;color:var(--blue);font-size:12px;font-weight:750}
+.approval-head h3{margin:0;color:var(--ink);font-size:21px;line-height:1.24;letter-spacing:-.04em}
+.approval-desc{margin:5px 0 0;color:var(--muted);font-size:13px}
+.approval-total{flex:none;padding:6px 11px;border-radius:999px;background:#e9f1ff;color:#1a57a8;font-size:13px;font-weight:750;white-space:nowrap}
+.approval-list{display:grid;gap:8px}
+.approval-row{display:grid;grid-template-columns:minmax(150px,.9fr) minmax(200px,2fr) auto;align-items:center;gap:12px 16px;padding:15px;border:1px solid #e7ecf4;border-radius:11px;background:#fff}
+.approval-team{color:var(--ink);font-size:15px;font-weight:750}
+.approval-team small{display:block;margin-top:3px;color:var(--muted);font-size:12px;font-weight:550}
+.approval-reason{color:#33435b;font-size:14px;line-height:1.5;overflow-wrap:anywhere}
+.approval-link{display:inline-flex;align-items:center;justify-content:center;min-height:40px;padding:0 13px;border:1px solid #c3d8f8;border-radius:9px;background:#eef5ff;color:#1557b2;font-size:13px;font-weight:750;text-decoration:none;white-space:nowrap}
+.approval-link:hover{background:#e1eeff;border-color:#8db9f3}
+.approval-unavailable{color:var(--quiet);font-size:12px}
+.status-line{margin-top:18px;color:var(--quiet);font-size:12px;text-align:center}
+
+@media(max-width:1000px){.hero-main{grid-template-columns:1fr;gap:19px}.hero-to{justify-content:center}.hero-number{font-size:96px}}
+@media(max-width:780px){
+  .topbar{align-items:flex-start;flex-wrap:wrap}
+  .top-actions{width:100%;justify-content:space-between;flex-wrap:wrap}
+  .refresh-status{order:3;flex-basis:100%}
+  .project-title{gap:6px 12px}.project-name{min-width:110px}
+  .project-arrivals{padding-left:0}
+  .approval-row{grid-template-columns:1fr auto}
+  .approval-reason{grid-column:1/-1;grid-row:2}
+  .approval-link,.approval-unavailable{grid-column:2;grid-row:1}
+}
+@media(max-width:700px){
+  main{padding:14px 13px 44px}
+  .hero{padding:23px 18px;border-radius:22px}
+  .hero-top{flex-direction:column;gap:14px}
+  .week-switch{align-self:flex-start}
+  .hero-main{margin-top:15px}
+  .hero-to{justify-content:flex-start}
+  .hero-number{font-size:80px}
+  .secondary-metrics{grid-template-columns:1fr}
+  .mini-metric{padding:17px}
+  .mini-value{font-size:40px}
+  .incoming-panel{margin-top:18px}
+  .incoming-head{align-items:flex-start}
+  .incoming-person{width:100%;justify-content:space-between}
+  .section-head{align-items:flex-start;flex-direction:column;margin-top:32px;gap:4px}
+  .project-row summary{align-items:flex-start;padding:16px}
+  .project-title{align-items:flex-start;gap:6px 9px}
+  .project-name{flex-basis:100%;font-size:19px}
+  .project-overview{font-size:13px;white-space:normal}
+  .project-arrivals{flex-basis:100%;font-size:13px}
+  .chevron{margin-top:4px}
+  .project-body{padding:0 13px 15px}
+  .table-scroll{border:0;border-radius:0;background:transparent;overflow:visible}
+  .roster-table,.roster-table tbody,.roster-table tr,.roster-table td{display:block;width:100%;min-width:0}
+  .roster-table thead{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+  .roster-table tbody{display:grid;gap:9px}
+  .roster-table tr{overflow:hidden;border:1px solid #e5ebf4;border-radius:11px;background:#fff}
+  .roster-table td{padding:9px 13px;border:0;text-align:left!important}
+  .roster-table td:first-child{border-right:0;border-bottom:1px solid #edf1f6;padding-top:13px;padding-bottom:11px}
+  .roster-table td:nth-child(2){display:flex;align-items:center;gap:11px;padding-bottom:4px}
+  .roster-table td:nth-child(2)::before{content:'전체 TO (재직)';color:var(--muted);font-size:12px;font-weight:650}
+  .roster-table td:nth-child(3){padding-top:4px;padding-bottom:13px}
+  .part-name{font-size:16px}
+  .approval-section{padding:16px;margin-top:20px}
+  .approval-head{flex-wrap:wrap;align-items:start}
+  .approval-head h3{font-size:20px}
+  .approval-row{padding:12px}
+}
+@media(max-width:420px){
+  .brand-logo{width:68px;height:45px}
+  .brand-copy strong{font-size:15px}
+  .brand-copy span{font-size:10px}
+  .top-actions{gap:7px}
+  .select-wrap select{max-width:150px;font-size:13px}
+  .sheet-link{padding:0 10px;font-size:12px}
+  .week-range{min-width:130px}
+  .approval-link{padding:0 10px;font-size:12px}
+}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}.chevron{transition:none}.icon-button.loading span{animation:none}}
+@media(prefers-reduced-transparency:reduce){.topbar,.hero,.project-row{background:#fff;-webkit-backdrop-filter:none;backdrop-filter:none}}
+</style>
+</head>
+<body>
+<main>
+<header class="topbar"><a class="brand" href="./" aria-label="대시보드 홈으로 이동"><img class="brand-logo" src="kong-studios-logo.png" alt="KONG STUDIOS 로고"><div class="brand-copy"><strong>KONGSTUDIOS</strong><span>RECRUITING DASHBOARD</span></div></a><div class="top-actions"><div class="select-wrap"><select id="projectFilter" aria-label="프로젝트 선택"><option value="">전체 프로젝트</option></select></div><a class="sheet-link" href="https://docs.google.com/spreadsheets/d/1c0x-dBPGGjDTPAXiO84-H-iwytpwy3WOAG05ogsXBuk/edit" target="_blank" rel="noopener">채용 시트</a><span class="refresh-status" id="refreshStatus" role="status" aria-live="polite"></span><button class="icon-button" id="refresh" type="button" aria-label="새로고침" title="새로고침"><span aria-hidden="true">↻</span></button></div></header>
+<section class="hero" aria-labelledby="summaryTitle"><div class="hero-top"><div><p class="eyebrow">RECRUITING STATUS</p><h1 id="summaryTitle">현재 채용 중인 TO</h1></div><div class="week-switch"><button id="prevWeek" type="button" aria-label="이전 주">‹</button><span id="weekRange" class="week-range"></span><button id="nextWeek" type="button" aria-label="다음 주">›</button></div></div><div class="hero-main"><div class="hero-to"><div class="hero-number"><span id="openCount">—</span><small>명</small></div></div><div class="secondary-metrics"><div class="mini-metric pipeline-card"><div class="mini-label">채용 진행 중</div><div class="mini-value"><span id="pipelineCount">—</span><span>명</span></div><div class="pipeline-breakdown"><span>사전과제(코테/과제) <b id="assessmentCount">—명</b></span><span>면접 <b id="interviewCount">—명</b></span><span>처우단계 <b id="negotiationCount">—명</b></span><span>입사 예정 <b id="plannedCount">—명</b></span></div><div class="mini-note" id="pipelineWarning" hidden>집계 웹 앱 업데이트 필요</div></div><div class="mini-metric"><div class="mini-label" id="weeklyLabel">이번 주 입사자</div><div class="mini-value"><span id="completedCount">—</span><span>명</span></div><div class="weekly-people" id="weeklyPeople"></div></div></div></div><div class="incoming-panel"><div class="incoming-head"><strong>입사 예정자 명단</strong><span id="incomingHint"></span></div><div class="incoming-list" id="incomingList"></div></div></section>
+<section aria-labelledby="projectsTitle"><div class="section-head"><div><p class="eyebrow">PROJECTS</p><h2 id="projectsTitle">프로젝트별 채용 현황</h2></div><p class="section-hint">프로젝트를 펼치면 모든 파트의 TO와 명단을 확인할 수 있습니다.</p></div><div class="project-list" id="projects"></div></section>
+<div class="status-line" id="status" role="status" aria-live="polite"></div>
+</main>
+<script src="config.js"></script>
+<script>
+'use strict';
+const API_URL=(typeof DATA_URL!=='undefined'&&DATA_URL)?DATA_URL:(window.DATA_URL||'');
+const $=id=>document.getElementById(id);let data=null,weekOffset=0;
+const num=v=>{const n=Number(v);return Number.isFinite(n)?n:0};
+const isoDate=value=>{if(!value)return '';if(typeof value==='number'||/^\d{5}$/.test(String(value)))return new Date(Date.UTC(1899,11,30)+Math.floor(Number(value))*86400000).toISOString().slice(0,10);const s=String(value);return /^\d{8}$/.test(s)?s.replace(/^(\d{4})(\d{2})(\d{2})$/,'$1-$2-$3'):s.slice(0,10)};
+const fmtDate=s=>{if(!s)return '일정 미정';const d=new Date(`${isoDate(s)}T00:00:00+09:00`);return Number.isNaN(d.getTime())?String(s):new Intl.DateTimeFormat('ko-KR',{timeZone:'Asia/Seoul',month:'numeric',day:'numeric',weekday:'short'}).format(d)};
+const weekBounds=()=>{const d=new Date(new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Seoul'}).format(new Date())+'T00:00:00Z');d.setUTCDate(d.getUTCDate()-(d.getUTCDay()+6)%7+weekOffset*7);const start=d.toISOString().slice(0,10);d.setUTCDate(d.getUTCDate()+6);return{start,end:d.toISOString().slice(0,10)}};
+const within=(date,start,end)=>Boolean(date&&start<=date&&date<=end);
+const entrants=()=>Array.isArray(data?.entrants)?data.entrants:[];
+function el(tag,text,className){const n=document.createElement(tag);if(text!==undefined)n.textContent=text;if(className)n.className=className;return n;}
+function normalizePayload(payload){
+  if(!payload||payload.error)throw Error(payload?.message||'공개 웹 앱 오류');
+  if(!Array.isArray(payload.parts))throw Error('파트 데이터를 받지 못했습니다. Apps Script 배포를 확인해 주세요.');
+  const normalizePart=p=>({...p,project:String(p.project||'').trim(),team:String(p.team||'').trim(),to:num(p.to),hc:num(p.hc),open:num(p.open),planned:num(p.planned),roster:Array.isArray(p.roster)?p.roster.map(r=>({...r,date:isoDate(r.date)})):[]});
+  const parts=payload.parts.filter(p=>p&&p.project&&p.team).map(normalizePart),groups=new Map();
+  for(const p of parts){if(!groups.has(p.project))groups.set(p.project,{project:p.project,parts:[]});groups.get(p.project).parts.push(p);}
+  const supplied=Array.isArray(payload.projects)?payload.projects.filter(p=>p&&p.project).map(p=>({project:String(p.project).trim(),parts:Array.isArray(p.parts)?p.parts.filter(r=>r&&r.team).map(r=>normalizePart({...r,project:p.project})):[]})):[];
+  const projects=supplied.length?supplied:[...groups.values()];
+  payload.projects=projects;payload.parts=projects.flatMap(p=>p.parts);payload.entrants=Array.isArray(payload.entrants)?payload.entrants.map(p=>({...p,date:isoDate(p.date)})):[];payload.daily=Array.isArray(payload.daily)?payload.daily:[];payload.approvals=Array.isArray(payload.approvals)?payload.approvals:[];
+  if(!projects.length)throw Error('프로젝트 데이터가 없습니다.');return payload;
+}
+function renderSummary(projects){
+  const selected=new Set(projects.map(p=>p.project)),{start,end}=weekBounds();
+  $('weekRange').textContent=`${fmtDate(start)} – ${fmtDate(end)}`;
+  $('weeklyLabel').textContent=weekOffset===0?'이번 주 입사자':'선택한 주 입사자';
+  $('openCount').textContent=projects.flatMap(p=>p.parts).reduce((s,p)=>s+num(p.open),0);
+  const selectedProject=$('projectFilter').value,pipeline=data.pipeline;
+  const hasBreakdown=pipeline?.byStage&&['assessment','interview','negotiation','planned'].every(key=>Number.isFinite(Number(pipeline.byStage[key])));
+  $('pipelineCount').textContent=hasBreakdown?(selectedProject?num(pipeline.byProject?.[selectedProject]):num(pipeline.total)):'—';
+  const breakdown=selectedProject?pipeline?.byProjectStage?.[selectedProject]:pipeline?.byStage;
+  for(const [key,id] of [['assessment','assessmentCount'],['interview','interviewCount'],['negotiation','negotiationCount'],['planned','plannedCount']])
+    $(id).textContent=hasBreakdown?`${num(breakdown?.[key])}명`:'—명';
+  $('pipelineWarning').hidden=!!hasBreakdown;
+  const planned=entrants().filter(p=>p.status==='입사예정'&&selected.has(p.project)).sort((a,b)=>(a.date||'').localeCompare(b.date||''));
+  const completed=entrants().filter(p=>p.status==='채용완료'&&selected.has(p.project)&&within(p.date,start,end));
+  const weekList=$('weeklyPeople');weekList.replaceChildren();
+  if(completed.length){for(const p of completed){const chip=el('span',undefined,'weekly-person');chip.append(el('b',p.name||'이름 미기재'),el('small',p.project));weekList.append(chip);}}else weekList.append(el('span','해당 주 입사자 없음','weekly-empty'));
+  $('completedCount').textContent=completed.length;
+  $('incomingHint').textContent=planned.length?`${planned.length}명`:'';
+  const list=$('incomingList');list.replaceChildren();if(!planned.length){list.append(el('span','등록된 입사 예정자가 없습니다.','empty'));return;}
+  for(const p of planned){const item=el('button',undefined,'incoming-person');item.type='button';item.setAttribute('aria-label',`${p.name||'입사 예정자'} · ${p.project} 프로젝트 열기`);item.append(el('b',p.name||'이름 미기재'),el('small',`${p.project} · ${p.team} · ${fmtDate(p.date)}`));item.addEventListener('click',()=>openProject(p.project));list.append(item);}
+}
+function rosterTable(project){
+  const wrapper=el('div',undefined,'table-scroll'),table=el('table',undefined,'roster-table'),head=document.createElement('thead'),tr=document.createElement('tr');
+  for(const title of ['파트','전체 TO (재직)','명단'])tr.append(el('th',title));head.append(tr);table.append(head);
+  const body=document.createElement('tbody');
+  for(const p of project.parts){const row=document.createElement('tr'),name=el('td');name.append(el('span',p.team,'part-name'));if(p.parent)name.append(el('span',p.parent,'part-parent'));row.append(name);
+    const roster=Array.isArray(p.roster)?p.roster:[];
+    const countCell=el('td'),combined=el('span',undefined,'combined-count');
+    combined.append(el('strong',`${num(p.to)}명`),el('span',`(${num(p.hc)}명)`));
+    countCell.title=`전체 TO ${num(p.to)}명, 재직 ${num(p.hc)}명`;countCell.append(combined);row.append(countCell);
+    const cell=el('td'),people=el('div',undefined,'people');
+    const registered=entrants().filter(e=>e.project===project.project&&e.team===p.team&&e.name);
+    const visibleRoster=roster.slice();
+    for(const e of registered)if(!roster.some(r=>r.name&&r.name.trim()===e.name.trim()))visibleRoster.push({name:e.name,status:e.status,date:e.date,code:e.code});
+    for(const person of visibleRoster){
+      const linked=registered.find(e=>person.name&&e.name.trim()===person.name.trim()&&(!person.code||!e.code||String(e.code)===String(person.code)));
+      const state=linked?.status||person.status||'재직';
+      if(!person.name&&!['TBH','공석'].includes(state))continue;
+      const chip=el('span',undefined,`person${state==='TBH'?' tbh':state==='입사예정'?' expected':state==='공석'?' vacant':''}`);
+      chip.append(document.createTextNode(person.name||(state==='공석'?'공석':'TBH')));
+      if(state==='입사예정'){chip.append(el('span','(입사예정)','expected-label'));chip.append(el('time',fmtDate(linked?.date||person.date)));}
+      if(person.code&&state!=='TBH')chip.title=`채용승인 ${person.code}${person.reason?' · '+person.reason:''}`;
+      people.append(chip);
+    }
+    if(!visibleRoster.length)people.append(el('span','명단 정보 없음','missing'));cell.append(people);row.append(cell);body.append(row);
+  }
+  if(!project.parts.length){const row=el('tr'),cell=el('td','프로젝트 파트 데이터를 받지 못했습니다.','project-empty');cell.colSpan=3;row.append(cell);body.append(row);}
+  table.append(body);wrapper.append(table);return wrapper;
+}
+function rosterLegend(){
+  const legend=el('div',undefined,'roster-legend');legend.setAttribute('aria-label','명단 상태 안내');legend.append(el('span','명단 상태','roster-legend-label'));
+  for(const [state,label] of [['tbh','TBH · 채용 중'],['expected','입사 예정'],['vacant','공석 · 승인 전']]){
+    const item=el('span',undefined,'legend-item'),mark=el('span',undefined,`legend-mark ${state}`);mark.setAttribute('aria-hidden','true');item.append(mark,document.createTextNode(label));legend.append(item);
+  }
+  return legend;
+}
+function approvalSection(project){
+  const list=el('div',undefined,'approval-list'),rows=data.approvals.filter(a=>a.project===project.project&&num(a.open)>0);
+  const section=el('section',undefined,'approval-section'),head=el('div',undefined,'approval-head'),heading=el('div',undefined,'approval-heading');
+  heading.append(el('span','채용승인신청서 기준','approval-kicker'),el('h3','채용 중인 TO 상세'),el('p','승인된 채용 건의 파트, 사유와 신청서를 확인하세요.','approval-desc'));
+  head.append(heading,el('span',`${rows.reduce((sum,row)=>sum+num(row.open),0)}명 채용 중`,'approval-total'));section.append(head);
+  if(!rows.length){list.append(el('div',project.parts.some(p=>num(p.open)>0)?'승인신청서 상세 정보가 없습니다. PublicDashboard.gs를 새 버전으로 배포해 주세요.':'현재 채용 중인 TO가 없습니다.','empty'));}
+  for(const a of rows){const row=el('div',undefined,'approval-row'),team=el('div',undefined,'approval-team');team.append(document.createTextNode(a.team),el('small',`${num(a.open)}명 채용 중${a.code?' · '+a.code:''}`));row.append(team,el('div',a.reason||'채용 사유 미기재','approval-reason'));
+    const url=String(a.url||'').trim();if(/^https?:\/\//i.test(url)){const link=el('a','신청서 열기','approval-link');link.href=url;link.target='_blank';link.rel='noopener noreferrer';row.append(link);}else row.append(el('span','링크 없음','approval-unavailable'));list.append(row);
+  }
+  section.append(list);return section;
+}
+function openProject(projectName){
+  const root=$('projects');
+  let article=[...root.querySelectorAll('.project-row')].find(row=>row.dataset.project===projectName);
+  if(!article){
+    const select=$('projectFilter');
+    if(![...select.options].some(option=>option.value===projectName))return;
+    select.value=projectName;renderProjects();
+    article=[...root.querySelectorAll('.project-row')].find(row=>row.dataset.project===projectName);
+  }
+  if(!article)return;
+  const details=article.querySelector('details');details.open=true;
+  article.scrollIntoView({behavior:'smooth',block:'start'});
+  details.querySelector('summary')?.focus({preventScroll:true});
+}
+function renderProjects(){if(!data)return;const selected=$('projectFilter').value,projects=data.projects.filter(p=>!selected||p.project===selected);renderSummary(projects);const root=$('projects');root.replaceChildren();
+  for(const project of projects){const to=project.parts.reduce((s,p)=>s+num(p.to),0),hc=project.parts.reduce((s,p)=>s+num(p.hc),0),activeTo=project.parts.reduce((s,p)=>s+num(p.open),0),planned=entrants().filter(p=>p.status==='입사예정'&&p.project===project.project),names=planned.map(p=>p.name).filter(Boolean);
+    const article=el('article',undefined,'project-row'),details=document.createElement('details'),summary=document.createElement('summary'),title=el('span',undefined,'project-title');article.dataset.project=project.project;title.append(el('span',project.project,'project-name'));const openBadge=el('span',undefined,`project-open${activeTo?'':' zero'}`);openBadge.append(document.createTextNode('채용 중 '),el('b',String(activeTo)),document.createTextNode('명'));title.append(openBadge);
+    const overview=el('span',undefined,'project-overview');overview.append(document.createTextNode('전체 TO '),el('b',`${to}명`),document.createTextNode(` (현재 ${hc}명 재직 중)`));title.append(overview);
+    if(planned.length){const arrival=el('span',undefined,'project-arrivals');arrival.append(document.createTextNode('입사 예정 '),el('b',`${planned.length}명`),document.createTextNode(` (${names.join(', ')})`));title.append(arrival);}summary.append(title,el('span','⌄','chevron'));
+    const content=el('div',undefined,'project-body');content.append(rosterLegend(),rosterTable(project),approvalSection(project));details.append(summary,content);article.append(details);root.append(article);
+  }
+  if(!projects.length)root.append(el('div','표시할 프로젝트가 없습니다.','project-empty'));
+}
+function status(message,error=false){const n=$('status');n.textContent=message;n.classList.toggle('error',error);}
+function refreshState(message,error=false){const n=$('refreshStatus');n.textContent=message;n.classList.toggle('error',error);}
+async function load(manual=false){
+  if(!API_URL){status('config.js의 공개 웹 앱 주소를 확인해 주세요.',true);refreshState('연결 설정 확인',true);return;}
+  const button=$('refresh');button.disabled=true;button.classList.add('loading');button.setAttribute('aria-label','새로고침 중');
+  refreshState(manual?'새로고침 중…':'불러오는 중…');status('데이터를 불러오는 중입니다.');
+  try{
+    const separator=API_URL.includes('?')?'&':'?';
+    const response=await fetch(`${API_URL}${separator}v=${Date.now()}`,{cache:'no-store'});
+    if(!response.ok)throw Error(`웹 앱 응답 오류 (HTTP ${response.status})`);
+    data=normalizePayload(await response.json());
+    const select=$('projectFilter'),old=select.value;select.replaceChildren(new Option('전체 프로젝트',''));
+    for(const p of data.projects)select.add(new Option(p.project,p.project));
+    select.value=[...select.options].some(o=>o.value===old)?old:'';renderProjects();
+    const now=new Date(),time=now.toLocaleTimeString('ko-KR',{timeZone:'Asia/Seoul',hour:'2-digit',minute:'2-digit',second:'2-digit'});
+    refreshState(`${manual?'새로고침 완료':'연결됨'} · ${time}`);
+    status(`${data.projects.length}개 프로젝트 연결 · ${now.toLocaleString('ko-KR',{timeZone:'Asia/Seoul'})}`);
+  }catch(e){refreshState(manual?'새로고침 실패':'연결 실패',true);status(e.message||'데이터를 불러오지 못했습니다.',true);}
+  finally{button.disabled=false;button.classList.remove('loading');button.setAttribute('aria-label','새로고침');}
+}
+$('refresh').addEventListener('click',()=>load(true));$('projectFilter').addEventListener('change',renderProjects);$('prevWeek').addEventListener('click',()=>{weekOffset--;if(data)renderProjects()});$('nextWeek').addEventListener('click',()=>{weekOffset++;if(data)renderProjects()});load();
+</script>
+</body>
+</html>
